@@ -1,0 +1,388 @@
+name: Android APK
+on:
+  push:
+    branches: [main]
+    paths: ['src/**', 'v2/**', 'index.html', 'public/**', 'android/**', 'package*.json', 'capacitor.config.json', 'vite.config.ts', '.github/workflows/android.yml', '.github/scripts/resolve-play-track.sh', '.github/scripts/resolve-play-track.test.sh', '.github/scripts/write-play-release-notes.py', '.github/scripts/check-play-service-account.py', '.github/scripts/upload-play-release.sh']
+  pull_request:
+    branches: [main]
+    paths: ['src/**', 'v2/**', 'index.html', 'public/**', 'android/**', 'package*.json', 'capacitor.config.json', 'vite.config.ts', '.github/workflows/android.yml', '.github/scripts/resolve-play-track.sh', '.github/scripts/resolve-play-track.test.sh', '.github/scripts/write-play-release-notes.py', '.github/scripts/check-play-service-account.py', '.github/scripts/upload-play-release.sh']
+  workflow_dispatch:
+    inputs:
+      track:
+        description: 'Play testing track. internal is the default. alpha is closed testing. beta is open testing. production is rejected.'
+        type: choice
+        required: true
+        default: internal
+        options:
+          - internal
+          - alpha
+          - beta
+permissions: { contents: read }
+# Pull requests still cancel a superseded pull request run. Pushes and manual
+# dispatches share a separate group and queue, so a second run cannot cancel
+# an in-flight Play upload. A pull request also cannot cancel that upload.
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && 'android-apk-pr' || 'android-apk-release' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Uploads from Windows drop the executable bit; restore it so the scripts and Gradle can run.
+      - run: chmod +x android/gradlew .github/scripts/*.sh .github/scripts/*.py
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm }
+      - uses: actions/setup-java@v5
+        with: { distribution: temurin, java-version: 21 }
+      - run: npm ci
+      - run: npm test
+      - run: npm run build          # base '/', loaded from the app bundle
+        env: { VITE_SUPABASE_URL: '${{ vars.VITE_SUPABASE_URL }}', VITE_SUPABASE_ANON_KEY: '${{ vars.VITE_SUPABASE_ANON_KEY }}', VITE_MAPBOX_PUBLIC_TOKEN: '${{ vars.VITE_MAPBOX_PUBLIC_TOKEN }}' }
+      - run: npx cap sync android
+      - run: cd android && ./gradlew testDebugUnitTest assembleDebug --no-daemon
+        env:
+          VITE_MAPBOX_PUBLIC_TOKEN: ${{ vars.VITE_MAPBOX_PUBLIC_TOKEN }}
+          MAPBOX_DOWNLOADS_TOKEN: ${{ secrets.MAPBOX_DOWNLOADS_TOKEN }}
+          MAPBOX_NAV_SDK_ENABLED: 'true'
+          APP_ID: ${{ vars.APP_ID }}
+      - name: Release bundle with R8
+        if: github.event_name == 'pull_request'
+        run: |
+          cd android && ./gradlew bundleRelease --no-daemon
+          test -s app/build/outputs/mapping/release/mapping.txt
+          AAB=app/build/outputs/bundle/release/app-release.aab
+          unzip -l "$AAB" | grep -q 'BUNDLE-METADATA/com.android.tools.build.obfuscation/proguard.map'
+          if unzip -l "$AAB" | grep -q '\.so$'; then
+            if [ -s app/build/outputs/native-debug-symbols/release/native-debug-symbols.zip ]; then
+              echo "Native debug symbols zip produced"
+            else
+              echo "Native libraries are in the bundle, but no debug-symbol zip was produced. Pre-stripped vendor libraries such as Mapbox do not include debug metadata."
+            fi
+          fi
+        env:
+          VITE_MAPBOX_PUBLIC_TOKEN: ${{ vars.VITE_MAPBOX_PUBLIC_TOKEN }}
+          MAPBOX_DOWNLOADS_TOKEN: ${{ secrets.MAPBOX_DOWNLOADS_TOKEN }}
+          MAPBOX_NAV_SDK_ENABLED: 'true'
+          APP_ID: ${{ vars.APP_ID }}
+      - run: cp android/app/build/outputs/apk/debug/app-debug.apk patrol-radar-debug.apk
+      - uses: actions/upload-artifact@v4
+        with: { name: patrol-radar-debug-apk, path: patrol-radar-debug.apk }
+
+  aab:
+    if: github.event_name != 'pull_request'
+    # Signed release bundle for Google Play (upload key from repo secrets).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Uploads from Windows drop the executable bit; restore it so the scripts and Gradle can run.
+      - run: chmod +x android/gradlew .github/scripts/*.sh .github/scripts/*.py
+      # Skip the signed Play Store bundle (and stay green) when no upload signing key is set up.
+      - name: Check for an upload signing key
+        id: signing
+        env:
+          KS_B64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_B64 }}
+          STORE_PW: ${{ secrets.ANDROID_UPLOAD_STORE_PASSWORD }}
+          KEY_PW: ${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
+        run: |
+          if [ -n "$KS_B64" ] && [ -n "$STORE_PW" ] && [ -n "$KEY_PW" ] && [ -n "$KEY_ALIAS" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Signed bundle skipped::No upload signing key secrets are set, so the Play Store bundle (AAB) was not built. The APK job is unaffected."
+            echo "### Signed Play Store bundle skipped" >> "$GITHUB_STEP_SUMMARY"
+            echo "Add the ANDROID_UPLOAD_* secrets to build a signed AAB. The APK artifact is still available." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/setup-node@v4
+        if: steps.signing.outputs.ready == 'true'
+        with: { node-version: 20, cache: npm }
+      - uses: actions/setup-java@v5
+        if: steps.signing.outputs.ready == 'true'
+        with: { distribution: temurin, java-version: 21 }
+      - run: npm ci
+        if: steps.signing.outputs.ready == 'true'
+      - run: npm run build
+        if: steps.signing.outputs.ready == 'true'
+        env: { VITE_SUPABASE_URL: '${{ vars.VITE_SUPABASE_URL }}', VITE_SUPABASE_ANON_KEY: '${{ vars.VITE_SUPABASE_ANON_KEY }}', VITE_MAPBOX_PUBLIC_TOKEN: '${{ vars.VITE_MAPBOX_PUBLIC_TOKEN }}' }
+      - run: npx cap sync android
+        if: steps.signing.outputs.ready == 'true'
+      - name: Build signed release AAB
+        if: steps.signing.outputs.ready == 'true'
+        env:
+          KS_B64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_B64 }}
+          ANDROID_UPLOAD_STORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_STORE_PASSWORD }}
+          ANDROID_UPLOAD_KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
+          ANDROID_UPLOAD_KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
+          # versionCode is this workflow's run number. Internal and Open testing are at 237;
+          # run numbers above 239 are ahead of those. versionName is package.json; bump it per release.
+          # Do not rename this workflow file: run_number would restart and collide. See docs/play-store/github-play-upload.md.
+          VERSION_CODE: ${{ github.run_number }}
+          VITE_MAPBOX_PUBLIC_TOKEN: ${{ vars.VITE_MAPBOX_PUBLIC_TOKEN }}
+          MAPBOX_DOWNLOADS_TOKEN: ${{ secrets.MAPBOX_DOWNLOADS_TOKEN }}
+          MAPBOX_NAV_SDK_ENABLED: 'true'
+          APP_ID: ${{ vars.APP_ID }}
+        run: |
+          echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          export ANDROID_UPLOAD_KEYSTORE="$RUNNER_TEMP/upload.jks"
+          cd android && ./gradlew bundleRelease --no-daemon
+          rm -f "$RUNNER_TEMP/upload.jks"
+          cp app/build/outputs/bundle/release/app-release.aab ../patrol-radar-release.aab
+          test -s app/build/outputs/mapping/release/mapping.txt
+          unzip -l ../patrol-radar-release.aab | grep -q 'BUNDLE-METADATA/com.android.tools.build.obfuscation/proguard.map'
+          if unzip -l ../patrol-radar-release.aab | grep -q '\.so$'; then
+            if [ -s app/build/outputs/native-debug-symbols/release/native-debug-symbols.zip ]; then
+              echo "Native debug symbols zip produced"
+            else
+              echo "Native libraries are in the bundle, but no debug-symbol zip was produced. Pre-stripped vendor libraries such as Mapbox do not include debug metadata."
+            fi
+          fi
+      - uses: actions/upload-artifact@v4
+        if: steps.signing.outputs.ready == 'true'
+        with: { name: patrol-radar-release-aab, path: patrol-radar-release.aab }
+      - uses: actions/upload-artifact@v4
+        if: steps.signing.outputs.ready == 'true'
+        with:
+          name: patrol-radar-release-mapping
+          path: android/app/build/outputs/mapping/release/mapping.txt
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: steps.signing.outputs.ready == 'true'
+        with:
+          name: patrol-radar-native-debug-symbols
+          path: android/app/build/outputs/native-debug-symbols/release/native-debug-symbols.zip
+          if-no-files-found: ignore
+
+  mapbox-sdk-smoke:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Uploads from Windows drop the executable bit; restore it so the scripts and Gradle can run.
+      - run: chmod +x android/gradlew .github/scripts/*.sh .github/scripts/*.py
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm }
+      - uses: actions/setup-java@v5
+        with: { distribution: temurin, java-version: 21 }
+      - run: npm ci
+      - run: npm run build
+        env:
+          VITE_MAPBOX_PUBLIC_TOKEN: ${{ vars.VITE_MAPBOX_PUBLIC_TOKEN }}
+      - run: npx cap sync android
+      - name: Verify native Mapbox SDK dependency resolves
+        env:
+          MAPBOX_DOWNLOADS_TOKEN: ${{ secrets.MAPBOX_DOWNLOADS_TOKEN }}
+          MAPBOX_NAV_SDK_ENABLED: 'true'
+          APP_ID: ${{ vars.APP_ID }}
+          VITE_MAPBOX_PUBLIC_TOKEN: ${{ vars.VITE_MAPBOX_PUBLIC_TOKEN }}
+        run: |
+          if [ -z "$MAPBOX_DOWNLOADS_TOKEN" ]; then
+            echo "::error::MAPBOX_DOWNLOADS_TOKEN secret is required"
+            exit 1
+          fi
+          case "$VITE_MAPBOX_PUBLIC_TOKEN" in
+            pk.*) echo "Public Mapbox token configured";;
+            *) echo "::error::VITE_MAPBOX_PUBLIC_TOKEN must be configured as a public pk. token"; exit 1;;
+          esac
+          cd android
+          ./gradlew compileDebugJavaWithJavac --no-daemon --console=plain
+
+  play-track-guard:
+    name: Play track guard
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      # Uploads from Windows drop the executable bit; restore it so the scripts and Gradle can run.
+      - run: chmod +x android/gradlew .github/scripts/*.sh .github/scripts/*.py
+      - name: Reject production and other tracks
+        run: bash .github/scripts/resolve-play-track.test.sh
+
+  # Runs only after apk tests and the signed aab both succeed, and only for
+  # pushes and manual runs of missionaryj/patrol-radar. Pull requests and forks
+  # do not upload. r0adkll/upload-google-play defaults to production when
+  # `tracks` is omitted; the track must be internal, alpha, or beta before it runs.
+  play:
+    name: Upload to Play testing track
+    needs: [apk, aab, play-track-guard]
+    if: |
+      success() &&
+      needs.apk.result == 'success' &&
+      needs.aab.result == 'success' &&
+      needs.play-track-guard.result == 'success' &&
+      github.event_name != 'pull_request' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+      github.repository == 'missionaryj/patrol-radar'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      # Uploads from Windows drop the executable bit; restore it so the scripts and Gradle can run.
+      - run: chmod +x android/gradlew .github/scripts/*.sh .github/scripts/*.py
+
+      - name: Resolve Play track
+        id: track
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          TRACK_INPUT: ${{ github.event.inputs.track }}
+          REPOSITORY: ${{ github.repository }}
+          REF: ${{ github.ref }}
+        run: |
+          track="$(.github/scripts/resolve-play-track.sh "$EVENT_NAME" "$TRACK_INPUT" "$REPOSITORY" "$REF")"
+          case "$track" in
+            internal|alpha|beta) ;;
+            *)
+              echo "::error title=Production blocked::Resolved track '$track' is not internal, alpha, or beta."
+              exit 1
+              ;;
+          esac
+          echo "track=$track" >> "$GITHUB_OUTPUT"
+          echo "Play track: $track"
+
+      - name: Check Play service account
+        id: creds
+        env:
+          PLAY_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          TRACK: ${{ steps.track.outputs.track }}
+        run: |
+          enabled="$(python3 .github/scripts/check-play-service-account.py)"
+          case "$enabled" in
+            enabled=true)
+              echo "enabled=true" >> "$GITHUB_OUTPUT"
+              ;;
+            enabled=false)
+              echo "enabled=false" >> "$GITHUB_OUTPUT"
+              echo "::notice title=Google Play upload skipped::PLAY_SERVICE_ACCOUNT_JSON is not set. Nothing was uploaded to the ${TRACK} track. The signed AAB remains artifact patrol-radar-release-aab. Setup: docs/play-store/github-play-upload.md"
+              {
+                echo "### Google Play upload skipped"
+                echo ""
+                echo "\`PLAY_SERVICE_ACCOUNT_JSON\` is not set, so this run did not upload to Google Play."
+                echo "Track: \`${TRACK}\`. versionCode (workflow run number): \`${{ github.run_number }}\`."
+                echo "The signed bundle is still available as artifact \`patrol-radar-release-aab\`."
+              } >> "$GITHUB_STEP_SUMMARY"
+              ;;
+            *)
+              echo "::error title=Play credentials::Unexpected credential check result."
+              exit 1
+              ;;
+          esac
+
+      - name: Download signed release artifacts
+        if: steps.creds.outputs.enabled == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: patrol-radar-release-*
+          path: play
+          merge-multiple: true
+
+      - name: See whether native debug symbols were uploaded
+        id: symbols
+        if: steps.creds.outputs.enabled == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          found="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts" --jq '[.artifacts[] | select(.name=="patrol-radar-native-debug-symbols" and .expired==false)] | length')"
+          if [ "$found" != "0" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "No native debug symbols artifact. Pre-stripped vendor libraries such as Mapbox do not include debug metadata."
+          fi
+
+      - name: Download native debug symbols
+        if: steps.creds.outputs.enabled == 'true' && steps.symbols.outputs.present == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: patrol-radar-native-debug-symbols
+          path: play
+
+      - name: Write Play release notes
+        id: notes
+        if: steps.creds.outputs.enabled == 'true'
+        env:
+          PLAY_DIR: play
+        run: python3 .github/scripts/write-play-release-notes.py
+
+      - name: Refuse any track other than internal, alpha, or beta
+        id: guard
+        if: steps.creds.outputs.enabled == 'true'
+        env:
+          TRACK: ${{ steps.track.outputs.track }}
+        run: |
+          case "$TRACK" in
+            internal|alpha|beta) ;;
+            *)
+              echo "::error title=Production blocked::Refusing to upload. Track '${TRACK}' is not internal, alpha, or beta. The Play upload action defaults to production when tracks is empty."
+              exit 1
+              ;;
+          esac
+          test -s play/patrol-radar-release.aab
+          test -s play/mapping.txt
+          test -s play/whatsnew/whatsnew-en-US
+          if [ -s play/native-debug-symbols.zip ]; then
+            echo "debug_symbols=play/native-debug-symbols.zip" >> "$GITHUB_OUTPUT"
+          else
+            echo "debug_symbols=" >> "$GITHUB_OUTPUT"
+            echo "No native debug symbols zip. Pre-stripped vendor libraries such as Mapbox do not include debug metadata."
+          fi
+          echo "safe=true" >> "$GITHUB_OUTPUT"
+          echo "Uploading versionCode ${{ github.run_number }} to ${TRACK}."
+
+      # v1.1.5, commit e738b9dd8f2476ea806d921b64aacd24f34515a5. Checked out so
+      # upload-play-release.sh can read the commit error and retry once when Play
+      # says changesNotSentForReview must not be set.
+      - name: Checkout upload-google-play v1.1.5
+        if: steps.creds.outputs.enabled == 'true' && steps.guard.outputs.safe == 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: r0adkll/upload-google-play
+          ref: e738b9dd8f2476ea806d921b64aacd24f34515a5
+          path: .upload-google-play
+          persist-credentials: false
+
+      - name: Setup Node for upload-google-play
+        if: steps.creds.outputs.enabled == 'true' && steps.guard.outputs.safe == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Upload signed AAB to Google Play
+        id: upload
+        if: steps.creds.outputs.enabled == 'true' && steps.guard.outputs.safe == 'true'
+        env:
+          PLAY_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          TRACK: ${{ steps.track.outputs.track }}
+          DEBUG_SYMBOLS: ${{ steps.guard.outputs.debug_symbols }}
+          ACTION_DIR: .upload-google-play
+        run: bash .github/scripts/upload-play-release.sh
+
+      - name: Summarize Play upload
+        if: success() && steps.creds.outputs.enabled == 'true' && steps.guard.outputs.safe == 'true'
+        env:
+          TRACK: ${{ steps.track.outputs.track }}
+          REVIEW_HOLD: ${{ steps.upload.outputs.review_hold }}
+          RETRIED: ${{ steps.upload.outputs.retried }}
+        run: |
+          {
+            echo "### Google Play upload"
+            echo ""
+            echo "Uploaded \`patrol-radar-release.aab\` to track \`${TRACK}\` with status \`completed\`."
+            echo "versionCode \`${{ github.run_number }}\` is the Android workflow run number. versionName comes from package.json."
+            echo ""
+            if [ "$TRACK" = "internal" ]; then
+              echo "Internal testing publishes to internal testers without Send for review."
+            elif [ "$RETRIED" = "true" ]; then
+              echo "Play rejected \`changesNotSentForReview\` because this edit does not need a review hold, so the edit was committed without it. Check Publishing overview before assuming Alpha or Open testers were held back."
+            else
+              echo "\`changesNotSentForReview\` was set, so this release is waiting in Publishing overview and was not sent for review. Open Publishing overview, read the full change list, click **Send for review**, and after approval click **Publish changes**."
+            fi
+            echo ""
+            echo "This did not target production. Review hold: \`${REVIEW_HOLD}\`."
+          } >> "$GITHUB_STEP_SUMMARY"
