@@ -29,6 +29,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # Uploads from Windows drop the executable bit; restore it so the scripts and Gradle can run.
+      - run: chmod +x android/gradlew .github/scripts/*.sh .github/scripts/*.py
       - uses: actions/setup-node@v4
         with: { node-version: 20, cache: npm }
       - uses: actions/setup-java@v5
@@ -43,6 +45,7 @@ jobs:
           VITE_MAPBOX_PUBLIC_TOKEN: ${{ vars.VITE_MAPBOX_PUBLIC_TOKEN }}
           MAPBOX_DOWNLOADS_TOKEN: ${{ secrets.MAPBOX_DOWNLOADS_TOKEN }}
           MAPBOX_NAV_SDK_ENABLED: 'true'
+          APP_ID: ${{ vars.APP_ID }}
       - name: Release bundle with R8
         if: github.event_name == 'pull_request'
         run: |
@@ -61,6 +64,7 @@ jobs:
           VITE_MAPBOX_PUBLIC_TOKEN: ${{ vars.VITE_MAPBOX_PUBLIC_TOKEN }}
           MAPBOX_DOWNLOADS_TOKEN: ${{ secrets.MAPBOX_DOWNLOADS_TOKEN }}
           MAPBOX_NAV_SDK_ENABLED: 'true'
+          APP_ID: ${{ vars.APP_ID }}
       - run: cp android/app/build/outputs/apk/debug/app-debug.apk patrol-radar-debug.apk
       - uses: actions/upload-artifact@v4
         with: { name: patrol-radar-debug-apk, path: patrol-radar-debug.apk }
@@ -71,6 +75,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # Uploads from Windows drop the executable bit; restore it so the scripts and Gradle can run.
+      - run: chmod +x android/gradlew .github/scripts/*.sh .github/scripts/*.py
       - uses: actions/setup-node@v4
         with: { node-version: 20, cache: npm }
       - uses: actions/setup-java@v5
@@ -92,6 +98,7 @@ jobs:
           VITE_MAPBOX_PUBLIC_TOKEN: ${{ vars.VITE_MAPBOX_PUBLIC_TOKEN }}
           MAPBOX_DOWNLOADS_TOKEN: ${{ secrets.MAPBOX_DOWNLOADS_TOKEN }}
           MAPBOX_NAV_SDK_ENABLED: 'true'
+          APP_ID: ${{ vars.APP_ID }}
         run: |
           echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/upload.jks"
           export ANDROID_UPLOAD_KEYSTORE="$RUNNER_TEMP/upload.jks"
@@ -125,6 +132,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # Uploads from Windows drop the executable bit; restore it so the scripts and Gradle can run.
+      - run: chmod +x android/gradlew .github/scripts/*.sh .github/scripts/*.py
       - uses: actions/setup-node@v4
         with: { node-version: 20, cache: npm }
       - uses: actions/setup-java@v5
@@ -138,6 +147,7 @@ jobs:
         env:
           MAPBOX_DOWNLOADS_TOKEN: ${{ secrets.MAPBOX_DOWNLOADS_TOKEN }}
           MAPBOX_NAV_SDK_ENABLED: 'true'
+          APP_ID: ${{ vars.APP_ID }}
           VITE_MAPBOX_PUBLIC_TOKEN: ${{ vars.VITE_MAPBOX_PUBLIC_TOKEN }}
         run: |
           if [ -z "$MAPBOX_DOWNLOADS_TOKEN" ]; then
@@ -158,6 +168,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+      # Uploads from Windows drop the executable bit; restore it so the scripts and Gradle can run.
+      - run: chmod +x android/gradlew .github/scripts/*.sh .github/scripts/*.py
         with:
           persist-credentials: false
       - name: Reject production and other tracks
@@ -184,6 +196,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+      # Uploads from Windows drop the executable bit; restore it so the scripts and Gradle can run.
+      - run: chmod +x android/gradlew .github/scripts/*.sh .github/scripts/*.py
         with:
           persist-credentials: false
 
