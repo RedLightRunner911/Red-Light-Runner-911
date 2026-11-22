@@ -168,10 +168,10 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
-      # Uploads from Windows drop the executable bit; restore it so the scripts and Gradle can run.
-      - run: chmod +x android/gradlew .github/scripts/*.sh .github/scripts/*.py
         with:
           persist-credentials: false
+      # Uploads from Windows drop the executable bit; restore it so the scripts and Gradle can run.
+      - run: chmod +x android/gradlew .github/scripts/*.sh .github/scripts/*.py
       - name: Reject production and other tracks
         run: bash .github/scripts/resolve-play-track.test.sh
 
@@ -196,10 +196,10 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
-      # Uploads from Windows drop the executable bit; restore it so the scripts and Gradle can run.
-      - run: chmod +x android/gradlew .github/scripts/*.sh .github/scripts/*.py
         with:
           persist-credentials: false
+      # Uploads from Windows drop the executable bit; restore it so the scripts and Gradle can run.
+      - run: chmod +x android/gradlew .github/scripts/*.sh .github/scripts/*.py
 
       - name: Resolve Play track
         id: track
