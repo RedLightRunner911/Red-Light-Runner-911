@@ -10,9 +10,10 @@ describe('tutorial', () => {
     const html = readFileSync('v2/index.html', 'utf8') + readFileSync('src/v2/cityChat.ts', 'utf8');
     for (const s of STEPS) if (s.target) expect(html).toContain(s.target.slice(1));
   });
-  it('covers privacy, scan, legend, cards, bell, travel mode and chat', () => {
+  it('covers privacy, scan, legend, cards, bell and travel mode', () => {
     const all = STEPS.map(s => s.body).join(' ');
-    for (const w of ['Receive-only', 'Scan', 'Record', 'Flock camera', 'legend', 'RSSI', 'app news', 'On foot', 'Car', '3D buildings', 'chat']) expect(all).toContain(w);
+    for (const w of ['Receive-only', 'Scan', 'Stop', 'pulses', 'Flock camera', 'legend', 'RSSI', 'app news', 'On foot', 'Car', '3D buildings']) expect(all).toContain(w);
+    expect(all).not.toContain('City chat'); expect(all).not.toContain('debug file');
   });
   it('steps forward/back within bounds', () => {
     const t = new TutorialState(3); expect(t.first).toBe(true); t.back(); expect(t.i).toBe(0);

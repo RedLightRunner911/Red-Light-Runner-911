@@ -5,12 +5,11 @@ export const TUTORIAL_KEY = 'pr.tutorial.done';
 
 export const STEPS: TutorialStep[] = [
   { id: 'welcome', title: 'Welcome to Police Radar', body: 'A passive map of police gear nearby: body cams, radios and in-car Wi-Fi heard over Bluetooth (and Wi-Fi in the Android app). Receive-only: it never connects or pairs, saved locations are ~200 m areas, and nothing personal is stored.' },
-  { id: 'scan', target: '#scan', title: 'Scan', body: 'Tap <b>Scan</b> to start listening and <b>Stop</b> to end. The pill at the top shows Idle / Scanning and the gear count. To send a debug file, open Live detections and tap <b>● Record</b>.' },
-  { id: 'map', target: '#map-legend', title: 'Reading the map', body: 'Your location dot is <b>You</b>; red pins are <b>Gear hits</b>; <b>Flock camera</b> marks mapped plate readers. Tap the legend to expand its categories. ◎ recenters and follows you; <b>3D</b> tilts the map.' },
+  { id: 'scan', target: '#scan', title: 'Scan', body: 'The red <b>Scan</b> button on the right starts listening. While it scans, the button pulses and shows <b>Stop</b>; tap it again to end. The card at the top left shows <b>Off</b> or <b>Scanning</b> and how many police devices were found.' },
+  { id: 'map', target: '#map-legend', title: 'Reading the map', body: 'Your location dot is <b>You</b>; red pins are <b>Gear hits</b>; <b>Flock camera</b> marks mapped plate readers. Tap the legend to expand its categories. ◎ (under Scan) recenters and follows you; <b>3D</b> tilts the map.' },
   { id: 'sheet', target: '#sheet', title: 'Live detections', body: 'Swipe up or tap the handle. Each card shows a grade (<b>strong</b>, <b>likely</b>, <b>hint</b>), a confidence %, signal (<b>RSSI</b>) and rough range (📍 ~m). Grouped signals appear as one 🚓 Vehicle card. The list scrolls on its own.' },
   { id: 'bell', target: '#open-updates', title: 'Updates', body: 'The bell shows app news, with a dot when something is new.' },
-  { id: 'settings', target: '#open-settings', title: 'Settings', body: 'Set <b>Travel mode</b> to <b>Car</b> or <b>On foot</b> (shorter range, stricter filtering). <b>3D buildings</b> is on by default. <b>Appearance</b> is Light, Dark, or Match system. You can also adjust scan mode, sounds, layers and replay this tutorial here.' },
-  { id: 'chat', target: '#open-chat', title: 'City chat', body: 'Anonymous, city-level chat with people nearby. Be civil: no names, plates or addresses. Posts delete after 24 h. That’s it, enjoy.' },
+  { id: 'settings', target: '#open-settings', title: 'Settings', body: 'Set <b>Travel mode</b> to <b>Car</b> or <b>On foot</b> (shorter range, stricter filtering). <b>3D buildings</b> is off by default. <b>Appearance</b> is Light, Dark, or Match system. You can also adjust scan mode, sounds, layers and replay this tutorial here.' },
 ];
 
 export const tutorialDone = (s: Store) => s.getItem(TUTORIAL_KEY) === '1';

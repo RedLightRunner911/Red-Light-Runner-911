@@ -602,3 +602,13 @@ body[data-navigation-driving="true"] .legend-card{display:none!important}
    clear of the legend card and the top buttons. */
 body[data-experience="patrol"] .toast{top:auto;bottom:calc(258px + var(--sb));animation:toast-rise .25s var(--ease)}
 @keyframes toast-rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+/* Scan is a square button at the top of the right-hand column, above recenter. It still pulses while scanning. */
+.fab-col{bottom:calc(118px + var(--sb));align-items:center}
+.fab-col>.fab{position:relative;left:auto;bottom:auto;transform:none;width:62px;height:62px;border-radius:17px;padding:4px}
+.fab-col>.fab:active{transform:scale(.94)}
+.fab-col>.fab .fab-core{border-radius:13px;font-size:11px;letter-spacing:.04em;gap:2px}
+.fab-col>.fab .fab-ring{border-radius:17px}
+body[data-experience="patrol"] .toast{bottom:calc(132px + var(--sb));left:calc(12px + var(--sl));right:calc(86px + var(--sr))}
+/* Map credits "i" moves to the left so it doesn't sit under the Scan / recenter column. */
+#map .leaflet-bottom.leaflet-right{right:auto;left:calc(4px + var(--sl))}
+#map .leaflet-bottom.leaflet-right .leaflet-control-attribution{margin-left:8px!important;margin-right:0!important}
