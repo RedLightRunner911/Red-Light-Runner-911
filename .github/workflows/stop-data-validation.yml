@@ -1,0 +1,19 @@
+name: Stop data validation
+on:
+  pull_request:
+    branches: [main]
+    paths: ['scripts/**', 'src/**', 'data/stop-heat/**', 'public/data/stop-heat/**', 'public/data/illinois-2025/**', 'docs/urbana*', 'docs/illinois*', 'docs/data/illinois-2025/**', 'package*.json', '.github/workflows/stop-data-validation.yml']
+permissions: { contents: read }
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.13' }
+      - run: python scripts/test-illinois-2025.py
+      - run: npm ci
+      - run: npm test
+      - run: npm run build

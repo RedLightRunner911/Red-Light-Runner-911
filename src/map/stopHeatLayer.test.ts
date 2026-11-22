@@ -1,0 +1,205 @@
+import { describe, it, expect } from 'vitest';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
+import { type HeatCell, OPEN_FILTER, beatFilesFor, cellTotals, countBuckets, evictKeys, filterCaption, heatPaint, heatPopup, topReasons, YEAR_BASE, BUCKET } from './stopHeatLayer';
+// @ts-expect-error untyped build script
+import { GRID_M, classifyReason, makeStop, snap, packBucket, HeatAgg, BeatSet, serialize, assertOutputClean, reasonIndex } from '../../scripts/stop-heat-lib.mjs';
+
+describe('stop heat aggregate', () => {
+  it('keeps the grid inside the 150–250 m band and off the raw point', () => {
+    expect(GRID_M).toBeGreaterThanOrEqual(150); expect(GRID_M).toBeLessThanOrEqual(250);
+    const raw = { lat: 40.0874, lng: -88.19005 };
+    const s = snap(raw.lat, raw.lng);
+    expect(s.lat).not.toBe(raw.lat);
+    const dLat = (s.lat - raw.lat) * 111_320, dLng = (s.lng - raw.lng) * 111_320 * Math.cos(raw.lat * Math.PI / 180);
+    expect(Math.hypot(dLat, dLng)).toBeLessThanOrEqual((GRID_M * Math.SQRT2) / 2 + 1);
+    const mid = snap(39.1, -77.2);
+    const a = snap(mid.lat + 0.00005, mid.lng + 0.00005), b = snap(mid.lat - 0.00005, mid.lng - 0.00005);
+    expect(a.lat).toBe(b.lat); expect(a.lng).toBe(b.lng);
+  });
+  it('refuses person fields and keeps only a reason category', () => {
+    expect(() => makeStop({ year: 2019, dow: 1, hour: 9, lat: 41.8, lng: -87.6, beatId: '', cite: 0, warn: 0, arrest: 0, reason: null, src: 0, officer_id: 'x' })).toThrow(/identifying/);
+    expect(() => makeStop({ year: 2019, dow: 1, hour: 9, lat: 41.8, lng: -87.6, mapping_address: '1 Main' })).toThrow(/identifying|unknown/);
+    expect(classifyReason('SPEEDING 26-34 MPH OVER LIMIT')).toBe(reasonIndex('speeding'));
+    expect(classifyReason('LIGHT, TAIL LIGHTS REQUIRED')).toBe(reasonIndex('equipment'));
+    expect(classifyReason('DISOBEY RED CIRCULAR STEADY SIGNAL STOP')).toBe(reasonIndex('signal'));
+    expect(classifyReason('STOP AT STOP SIGN')).toBe(reasonIndex('stop sign'));
+    expect(classifyReason('DRIVING ON SUSPENDED LICENSE')).toBe(reasonIndex('license'));
+    expect(classifyReason('Not Applicable')).toBeNull();
+  });
+  it('does not move Urbana stops into Champaign beats with the same code', () => {
+    const square = (x: number) => [[[x, 0], [x + 1, 0], [x + 1, 1], [x, 1], [x, 0]]];
+    const urbana = new BeatSet('urbana', 'Urbana');
+    const champaign = new BeatSet('champaign', 'Champaign');
+    urbana.add('1', square(0));
+    champaign.add('1', square(2));
+    const agg = new HeatAgg();
+    agg.addBeatSet(urbana);
+    agg.addBeatSet(champaign);
+    agg.finishIndex();
+    const stop = {year: 2020, dow: 3, hour: 12, lat: 0.5, lng: 2.5, beatId: '1', cite: 0, warn: 0, arrest: 0, reason: null, src: 0};
+    agg.add(makeStop(stop), urbana);
+    expect(agg.units.get('champaign:1')).toBeUndefined();
+    expect([...agg.units.values()].find((u: {kind: string}) => u.kind === 'grid')?.n).toBe(1);
+    agg.add(makeStop({...stop, src: 1}), champaign);
+    expect(agg.units.get('champaign:1')?.n).toBe(1);
+    // An unscoped coordinate is a grid cell, not a guessed police beat.
+    agg.add(makeStop({...stop, beatId: '', src: 2}));
+    expect(agg.units.get('champaign:1')?.n).toBe(1);
+    expect(agg.mapped).toBe(3);
+  });
+  it('counts a beat when the point is inside, otherwise a grid cell', () => {
+    const ring = [[-88.2, 40.1], [-88.1, 40.1], [-88.1, 40.2], [-88.2, 40.2], [-88.2, 40.1]];
+    const set = new BeatSet('t', 'Testville', () => 'Beat 1');
+    set.add('1', [ring]);
+    const agg = new HeatAgg();
+    agg.addBeatSet(set); agg.finishIndex();
+    const row = { cite: 0, warn: 0, arrest: 0, src: 0, beatId: '' };
+    agg.add(makeStop({ ...row, year: 2019, dow: 1, hour: 9, lat: 40.15, lng: -88.15, beatId: '1', cite: 1, reason: reasonIndex('speeding') }), set);
+    agg.add(makeStop({ ...row, year: 2019, dow: 2, hour: 22, lat: 41.9, lng: -87.6, warn: 1, reason: reasonIndex('equipment') }), set);
+    expect(agg.mapped).toBe(2);
+    expect(agg.units.get('t:1')?.n).toBe(1);
+    const grid = [...agg.units.values()].find((u: { kind: string }) => u.kind === 'grid');
+    expect(grid.n).toBe(1);
+    const built = serialize(agg);
+    assertOutputClean(built.beatFiles.get('t'));
+    expect(JSON.stringify(built)).not.toMatch(/officer|mapping_address|subject_age|SPEEDING 26/);
+  });
+});
+
+describe('stop heat filters and popup', () => {
+  const year = 2019, tod = 2, dow = 1;
+  const pack = (year - YEAR_BASE) * BUCKET + tod * 7 + dow;
+  const b = [pack, 4, pack + 1, 1];
+  const o = [pack, 3, 0, 1];
+  const r = [year - YEAR_BASE, 0, 4];
+  it('filters year, hour and weekday', () => {
+    expect(countBuckets(b, o, { year, tod, dow }).n).toBe(4);
+    expect(countBuckets(b, o, { year, tod, dow }).cite).toBe(3);
+    expect(countBuckets(b, o, { year: 2018, tod: null, dow: null }).n).toBe(0);
+    expect(countBuckets(b, o, { year: null, tod: 0, dow: null }).n).toBe(0);
+    expect(countBuckets(b, o, { year: null, tod: null, dow: null }).n).toBe(5);
+    expect(packBucket(year, tod, dow)).toBe(pack);
+  });
+  it('popup shows the count, share, reason and source, and names the cell size', () => {
+    const html = heatPopup({
+      title: 'Historical stops', count: countBuckets(b, o, { year, tod: null, dow: null }),
+      reasons: topReasons(r, { year, tod: null, dow: null }, ['speeding']),
+      filter: { year, tod: null, dow: null }, caption: filterCaption({ year, tod: null, dow: null }, [{ id: 'morning', label: 'Morning', hint: '8a–12p' }], ['Sun']),
+      sources: [{ name: 'Stanford Open Policing Project — Chicago', url: 'https://openpolicing.stanford.edu/data/', license: 'ODC-BY 1.0', last_updated: '2023-02-01' }],
+      gridM: 200,
+    });
+    expect(html).toContain('<b>5</b>'); expect(html).toContain('Citation 75%'); expect(html).toContain('speeding');
+    expect(html).toContain('ODC-BY'); expect(html).toContain('200 m'); expect(html).toContain('uneven');
+    expect(html).not.toMatch(/officer|badge|subject_age/);
+    expect(heatPaint(1000).fillOpacity).toBeGreaterThan(heatPaint(1).fillOpacity);
+    const ranked = topReasons([29, 0, 4, 29, 1, 3, 29, 2, 2, 29, 3, 1], { year: 2019, tod: null, dow: null }, ['speeding', 'equipment', 'signal', 'other']);
+    expect(ranked).toHaveLength(3);
+    expect(ranked[0].total).toBe(10);
+    const rankedPopup = heatPopup({ title: 'Test', count: { n: 10, cite: 0, warn: 0, arrest: 0 }, reasons: ranked, filter: { year: 2019, tod: null, dow: null }, caption: '2019', sources: [] });
+    expect(rankedPopup).toContain('speeding 40%');
+    expect(rankedPopup).not.toContain('speeding 44%');
+  });
+});
+
+describe('stop heat processed files', () => {
+  const dir = 'public/data/stop-heat/';
+  it('index, beats and tiles attribute sources and contain no person fields', () => {
+    expect(existsSync(dir + 'index.json')).toBe(true);
+    const idx = JSON.parse(readFileSync(dir + 'index.json', 'utf8'));
+    expect(idx.gridM).toBeGreaterThanOrEqual(150); expect(idx.gridM).toBeLessThanOrEqual(250);
+    expect(idx.disclaimer).toMatch(/uneven/);
+    expect(idx.attribution).toMatch(/Open Policing Project/);
+    expect(idx.sources.some((s: { id: string }) => s.id === 'opp_mt')).toBe(true);
+    expect(idx.sources.some((s: { id: string }) => s.id === 'opp_chicago')).toBe(true);
+    expect(idx.notMapped.some((s: { id: string }) => s.id === 'opp_chicago')).toBe(false);
+    const chicago = idx.sources.find((s: { id: string }) => s.id === 'opp_chicago');
+    expect(chicago.note).toMatch(/not a certified unique-stop count/);
+    expect(chicago.audit.duplicate_rows).toBeGreaterThan(0);
+    expect(chicago.audit.seen).toBe(2108098);
+    const urbana = idx.sources.find((s: { id: string }) => s.id === 'urbana_ivc');
+    expect(urbana.note).toMatch(/citywide total/);
+    expect(urbana.note).toMatch(/Champaign/);
+    expect(urbana.precision).toMatch(/no 150 m cells/);
+    expect(idx.totals.mapped).toBeGreaterThan(1000);
+    expect(idx.notMapped.some((g: { id: string }) => g.id === 'ct_stops')).toBe(true);
+    expect(idx.notMapped.some((g: { id: string }) => g.id === 'urbana')).toBe(true);
+    const files = [dir + 'index.json', ...idx.beatFiles.map((f: string) => dir + f), ...Object.keys(idx.tiles).map((k: string) => `${dir}tiles/${k}.json`)];
+    const banned = /officer_id|subject_age|subject_race|driver_city|driver_name|mapping_address|badge_no|date_of_birth|"ssn"|anonymous_house/;
+    for (const f of files) {
+      const text = readFileSync(f, 'utf8');
+      expect(text).not.toMatch(banned);
+      JSON.parse(text);
+    }
+    expect(readdirSync(dir, { recursive: true }).some((f: string | Buffer) => String(f).endsWith('.csv') || String(f).endsWith('.zip'))).toBe(false);
+    expect(idx.beatFiles).toEqual(['beats/urbana_ivc.json', 'beats/cpd_2025.json', 'beats/spd_2025.json', 'beats/champaign_2025.json']);
+    const beat = JSON.parse(readFileSync(dir + 'beats/urbana_ivc.json', 'utf8'));
+    expect(beat.features).toHaveLength(1);
+    expect(beat.features[0].properties.place).toBe('Urbana city');
+    expect(beat.features[0].properties.label).toMatch(/citywide/);
+    expect(JSON.stringify(beat)).not.toMatch(/Champaign/);
+    const totals = new Map<number, number>(); let buckets = 0;
+    const addBuckets = (src: number[], b: number[]) => {
+      for (let i = 0; i < src.length; i += 2) totals.set(src[i], (totals.get(src[i]) ?? 0) + src[i + 1]);
+      for (let i = 1; i < b.length; i += 2) buckets += b[i];
+    };
+    for (const file of idx.beatFiles) {
+      const collection = JSON.parse(readFileSync(dir + file, 'utf8'));
+      for (const feature of collection.features) {
+        addBuckets(feature.properties.src, feature.properties.b);
+        if (file.endsWith('cpd_2025.json')) {
+          const open = countBuckets(feature.properties.b, feature.properties.o, { year: null, tod: null, dow: null }).n;
+          const year2025 = countBuckets(feature.properties.b, feature.properties.o, { year: 2025, tod: null, dow: null }).n;
+          const year2024 = countBuckets(feature.properties.b, feature.properties.o, { year: 2024, tod: null, dow: null }).n;
+          expect(open).toBeGreaterThan(0);
+          expect(year2025).toBe(open);
+          expect(year2024).toBe(0);
+        }
+      }
+    }
+    for (const key of Object.keys(idx.tiles)) {
+      const cells = JSON.parse(readFileSync(`${dir}tiles/${key}.json`, 'utf8'));
+      for (const cell of cells) addBuckets(cell[2], cell[3]);
+    }
+    expect(buckets).toBe(idx.totals.mapped);
+    idx.sources.forEach((s: { mapped: number; audit: { seen: number; accepted: number; rejected: number; duplicate_rows: number } }, i: number) => {
+      expect(totals.get(i)).toBe(s.mapped);
+      expect(s.audit.seen).toBe(s.audit.accepted + s.audit.rejected + s.audit.duplicate_rows);
+    });
+    expect(idx.coverage.states_with_records).toEqual(['CA', 'IL', 'MD', 'MT', 'NY', 'OH', 'VT']);
+    expect(idx.attribution).toMatch(/Urbana/);
+    expect(idx.disclaimer).toMatch(/citywide total/);
+    expect(idx.coverage.occupied_cell_us_area_percent).toBeLessThan(1);
+    expect(idx.coverage.point_area_m2).toBe(0);
+  });
+});
+
+describe('stop heat loading budget', () => {
+  it('fetches only beat files whose recorded bounds touch the view', () => {
+    const idx = { beatFiles: ['beats/a.json', 'beats/b.json', 'beats/old.json'], beatBounds: { 'beats/a.json': [-88, 41, -87, 42], 'beats/b.json': [-90, 39, -89, 40] } as Record<string, [number, number, number, number]> };
+    expect(beatFilesFor(idx, { south: 41.5, west: -87.8, north: 41.9, east: -87.5 })).toEqual(['beats/a.json', 'beats/old.json']);
+    expect(beatFilesFor({ beatFiles: idx.beatFiles }, { south: 0, west: 0, north: 1, east: 1 })).toEqual(idx.beatFiles);
+  });
+  it('index records bounds for every shipped beat file', () => {
+    const idx = JSON.parse(readFileSync('public/data/stop-heat/index.json', 'utf8'));
+    expect(Object.keys(idx.beatBounds).sort()).toEqual([...idx.beatFiles].sort());
+    expect(beatFilesFor(idx, { south: 41.85, west: -87.65, north: 41.9, east: -87.6 })).toEqual(['beats/cpd_2025.json']);
+  });
+  it('evicts least recently used tiles but never the ones on screen', () => {
+    const keys = Array.from({ length: 15 }, (_, i) => `k${i}`);
+    expect(evictKeys(keys, new Set(['k0', 'k1']), () => 1, 12)).toEqual(['k2', 'k3', 'k4']);
+    expect(evictKeys(keys.slice(0, 5), new Set(), () => 1, 12)).toEqual([]);
+    const cells: Record<string, number> = { a: 12_000, b: 12_000, c: 12_000, d: 500 };
+    expect(evictKeys(['a', 'b', 'c', 'd'], new Set(['c', 'd']), k => cells[k], 12, 30_000)).toEqual(['a']);
+    expect(evictKeys(['a', 'b'], new Set(['a', 'b']), k => cells[k], 1, 1)).toEqual([]);
+  });
+  it('memoises per-cell totals per filter and matches countBuckets', () => {
+    const tile = JSON.parse(readFileSync('public/data/stop-heat/tiles/41.75_-87.75.json', 'utf8')) as HeatCell[];
+    const f = { year: 2015, tod: 2, dow: 3 };
+    const a = cellTotals(tile, f);
+    expect(cellTotals(tile, f)).toBe(a);
+    for (let i = 0; i < tile.length; i += 97) expect(a[i]).toBe(countBuckets(tile[i][3], tile[i][4], f).n);
+    const open = cellTotals(tile, OPEN_FILTER);
+    expect(open).not.toBe(a);
+    expect(open.reduce((s, n) => s + n, 0)).toBeGreaterThan(a.reduce((s, n) => s + n, 0));
+  });
+});

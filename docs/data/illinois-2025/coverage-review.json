@@ -1,0 +1,40 @@
+{
+  "review_date": "2026-11-16",
+  "current_boundary_features": 277,
+  "observed_cpd_beat_codes": 275,
+  "cpd_rows_with_current_code_match": 224851,
+  "historical_geographic_mapping_verified": false,
+  "mapped_records_added": 0,
+  "current_boundary_url": "https://data.cityofchicago.org/resource/n9it-hstw.geojson?$limit=1000",
+  "current_boundary_sha256": "775a45ea97fd6ef5f95d6b299bec0732556bb6d6ed8d805338ee298387acd468",
+  "metadata_url": "https://data.cityofchicago.org/api/views/n9it-hstw.json",
+  "metadata_sha256": "f1e5b103fe43d4aaa5627b090ca5b61f4cbc9da0b80a2130bce6709c41c77838",
+  "publisher_table_name": "PoliceBeatDec2012",
+  "publisher_rows_updated_utc": "2013-02-13T05:50:16+00:00",
+  "existing_map_manifest_sha256": "3d4744ffc31c0c415cbe07bbe44b96971d2fef25230ab1522b04e3c65c678105",
+  "existing_map_totals": {
+    "stops": 7766114,
+    "mapped": 7766114,
+    "unmapped": 1511342,
+    "beats": 1,
+    "cells": 183115
+  },
+  "existing_illinois_sources": [
+    {
+      "id": "opp_chicago",
+      "accepted": 1877250,
+      "date_range": [
+        "2012-01-01",
+        "2020-05-16"
+      ]
+    },
+    {
+      "id": "urbana_ivc",
+      "accepted": 28241,
+      "date_range": [
+        "2013-01-01",
+        "2023-02-14"
+      ]
+    }
+  ]
+}

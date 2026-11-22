@@ -1,0 +1,328 @@
+{
+  "schema_version": 1,
+  "reporting_year": 2025,
+  "files": [
+    {
+      "family": "cpd",
+      "txt": "2025 CPD Jan-June Traffic Redacted.txt",
+      "xlsx": "2025 CPD Jan-June Traffic Redacted.xlsx",
+      "txt_sha256": "6428aa09e1e707a8758a20ddad9d1470422ba774d958018133687df010d49a20",
+      "xlsx_sha256": "954c42d62433da3dbf82b30c3e74fee90a1ac74353df3b1a102a810f389472f5",
+      "columns": 52,
+      "source_rows": 134090,
+      "repeated_full_rows": 99,
+      "repeated_agency_ids": 0,
+      "candidate_repeated_attribute_rows": 99,
+      "conflicting_agency_id_rows": 0,
+      "invalid_or_out_of_year_dates": 0,
+      "unknown_times": 0,
+      "months": {
+        "2025-01": 29705,
+        "2025-02": 25976,
+        "2025-03": 25219,
+        "2025-04": 21970,
+        "2025-05": 18239,
+        "2025-06": 12981
+      },
+      "agency_count": 1,
+      "sheets": {
+        "xl/worksheets/sheet1.xml": {
+          "rows": 134090,
+          "traffic": true
+        }
+      },
+      "workbook_rows": 134090,
+      "matching_normalized_rows": 134090,
+      "txt_only_rows": 0,
+      "matching_export_equivalent_rows": 134090,
+      "export_substitution_columns": {},
+      "export_equivalence_rule": "TXT tilde versus XLSX apostrophe in vehicle make or beat; comparison only, never source identity or geography",
+      "workbook_only_rows": 0,
+      "normalized_order_equal": true
+    },
+    {
+      "family": "cpd",
+      "txt": "2025 CPD July-Dec Traffic Redacted.txt",
+      "xlsx": "2025 CPD July-Dec Traffic Redacted.xlsx",
+      "txt_sha256": "43615d7b386d9a1cc812e73e3f73e9ca9217d2a9fe6c933e0bfcbfdf2ed93bfd",
+      "xlsx_sha256": "3e947b986118017a7922c5d1bd10af5161ed87a351021e897733c314e6a5cd6a",
+      "columns": 52,
+      "source_rows": 88011,
+      "repeated_full_rows": 57,
+      "repeated_agency_ids": 0,
+      "candidate_repeated_attribute_rows": 57,
+      "conflicting_agency_id_rows": 0,
+      "invalid_or_out_of_year_dates": 0,
+      "unknown_times": 0,
+      "months": {
+        "2025-07": 17434,
+        "2025-08": 14726,
+        "2025-09": 14109,
+        "2025-10": 14701,
+        "2025-11": 14594,
+        "2025-12": 12447
+      },
+      "agency_count": 1,
+      "sheets": {
+        "xl/worksheets/sheet1.xml": {
+          "rows": 88011,
+          "traffic": true
+        }
+      },
+      "workbook_rows": 88011,
+      "matching_normalized_rows": 88011,
+      "txt_only_rows": 0,
+      "matching_export_equivalent_rows": 88011,
+      "export_substitution_columns": {},
+      "export_equivalence_rule": "TXT tilde versus XLSX apostrophe in vehicle make or beat; comparison only, never source identity or geography",
+      "workbook_only_rows": 0,
+      "normalized_order_equal": true
+    },
+    {
+      "family": "cpd",
+      "txt": "2025 CPD Traffic  Jan-June Supplementary Redacted.txt",
+      "xlsx": "2025 CPD Traffic  Jan-June Supplementary Redacted.xlsx",
+      "txt_sha256": "da80d509950aa44d80e6d895fa8b01e0284f2f45b442e832ffb1d64802379756",
+      "xlsx_sha256": "5722d41a778683307a0fee1079bbc9eb883768dbbce10b0f76195c1fc6dd30b9",
+      "columns": 52,
+      "source_rows": 2750,
+      "repeated_full_rows": 27,
+      "repeated_agency_ids": 0,
+      "candidate_repeated_attribute_rows": 27,
+      "conflicting_agency_id_rows": 0,
+      "invalid_or_out_of_year_dates": 0,
+      "unknown_times": 0,
+      "months": {
+        "2025-01": 62,
+        "2025-02": 40,
+        "2025-03": 122,
+        "2025-04": 249,
+        "2025-05": 681,
+        "2025-06": 1596
+      },
+      "agency_count": 1,
+      "sheets": {
+        "xl/worksheets/sheet1.xml": {
+          "rows": 2750,
+          "traffic": true
+        }
+      },
+      "workbook_rows": 2750,
+      "matching_normalized_rows": 2750,
+      "txt_only_rows": 0,
+      "matching_export_equivalent_rows": 2750,
+      "export_substitution_columns": {},
+      "export_equivalence_rule": "TXT tilde versus XLSX apostrophe in vehicle make or beat; comparison only, never source identity or geography",
+      "workbook_only_rows": 0,
+      "normalized_order_equal": true
+    },
+    {
+      "family": "lake_bluff",
+      "txt": "Revised Lake Bluff Traffic Redacted  Data.txt",
+      "xlsx": "Revised Lake Bluff Traffic Redacted  Data.xlsx",
+      "txt_sha256": "810aced8b34bf6c4f6164bf360bf14d4dc0505178516d31dd841bb6d07e5adea",
+      "xlsx_sha256": "e8d594d7c8a9c8c97792e3c8d429ea1ba04424568c202a0b3b332cf6de6be2f7",
+      "columns": 52,
+      "source_rows": 1517,
+      "repeated_full_rows": 0,
+      "repeated_agency_ids": 0,
+      "candidate_repeated_attribute_rows": 0,
+      "conflicting_agency_id_rows": 0,
+      "invalid_or_out_of_year_dates": 0,
+      "unknown_times": 0,
+      "months": {
+        "2025-01": 146,
+        "2025-02": 111,
+        "2025-03": 143,
+        "2025-04": 176,
+        "2025-05": 121,
+        "2025-06": 120,
+        "2025-07": 115,
+        "2025-08": 101,
+        "2025-09": 103,
+        "2025-10": 136,
+        "2025-11": 129,
+        "2025-12": 116
+      },
+      "agency_count": 1,
+      "sheets": {
+        "xl/worksheets/sheet1.xml": {
+          "rows": 1517,
+          "traffic": true
+        }
+      },
+      "workbook_rows": 1517,
+      "matching_normalized_rows": 1517,
+      "txt_only_rows": 0,
+      "matching_export_equivalent_rows": 1517,
+      "export_substitution_columns": {},
+      "export_equivalence_rule": "TXT tilde versus XLSX apostrophe in vehicle make or beat; comparison only, never source identity or geography",
+      "workbook_only_rows": 0,
+      "normalized_order_equal": true
+    },
+    {
+      "family": "statewide",
+      "txt": "2025 Traffic Data 1 Redacted .txt",
+      "xlsx": "2025 Traffic Data 1 Redacted .xlsx",
+      "txt_sha256": "356454bf0dd633e3133471ab114c8705c96f9c98f4ea42812dd40a69dda3e862",
+      "xlsx_sha256": "d224eb2d9118f5fc8fb79f5cfe946a765a860999d39596b1fa7fe2ead301f3da",
+      "columns": 54,
+      "source_rows": 999999,
+      "repeated_full_rows": 0,
+      "repeated_agency_ids": 0,
+      "candidate_repeated_attribute_rows": 114,
+      "conflicting_agency_id_rows": 0,
+      "invalid_or_out_of_year_dates": 0,
+      "unknown_times": 0,
+      "months": {
+        "2025-01": 131338,
+        "2025-02": 126655,
+        "2025-03": 149603,
+        "2025-04": 143364,
+        "2025-05": 136959,
+        "2025-06": 122100,
+        "2025-07": 102500,
+        "2025-08": 78204,
+        "2025-09": 9276
+      },
+      "agency_count": 678,
+      "sheets": {
+        "xl/worksheets/sheet1.xml": {
+          "rows": 999999,
+          "traffic": true
+        }
+      },
+      "workbook_rows": 999999,
+      "matching_normalized_rows": 999986,
+      "txt_only_rows": 13,
+      "matching_export_equivalent_rows": 999999,
+      "export_substitution_columns": {
+        "BeatLocationOfStop": 6,
+        "VehicleMake": 7
+      },
+      "export_equivalence_rule": "TXT tilde versus XLSX apostrophe in vehicle make or beat; comparison only, never source identity or geography",
+      "workbook_only_rows": 13,
+      "normalized_order_equal": false
+    },
+    {
+      "family": "statewide",
+      "txt": "2025 Traffic Data 2A Redacted .txt",
+      "xlsx": "2025 Traffic Data 2A Redacted .xlsx",
+      "txt_sha256": "429c47091f4d75ea4eef1d5864e06104d6f3cb311e1116d487eb12d35afe3921",
+      "xlsx_sha256": "a2b315133e384e7c17e8cc28a0dc9ddb10a501de1b07ce9fe27de6b3de12c5a6",
+      "columns": 54,
+      "source_rows": 419998,
+      "repeated_full_rows": 0,
+      "repeated_agency_ids": 0,
+      "candidate_repeated_attribute_rows": 100,
+      "conflicting_agency_id_rows": 0,
+      "invalid_or_out_of_year_dates": 0,
+      "unknown_times": 0,
+      "months": {
+        "2025-01": 8739,
+        "2025-02": 10758,
+        "2025-03": 13415,
+        "2025-04": 13001,
+        "2025-05": 14511,
+        "2025-06": 14575,
+        "2025-07": 16828,
+        "2025-08": 33735,
+        "2025-09": 96525,
+        "2025-10": 99093,
+        "2025-11": 80842,
+        "2025-12": 17976
+      },
+      "agency_count": 582,
+      "sheets": {
+        "xl/worksheets/sheet1.xml": {
+          "rows": 419998,
+          "traffic": true
+        }
+      },
+      "workbook_rows": 419998,
+      "matching_normalized_rows": 419986,
+      "txt_only_rows": 12,
+      "matching_export_equivalent_rows": 419998,
+      "export_substitution_columns": {
+        "BeatLocationOfStop": 12
+      },
+      "export_equivalence_rule": "TXT tilde versus XLSX apostrophe in vehicle make or beat; comparison only, never source identity or geography",
+      "workbook_only_rows": 12,
+      "normalized_order_equal": false
+    },
+    {
+      "family": "statewide",
+      "txt": "2025 Traffic Data 2B Redacted.txt",
+      "xlsx": "2025 Traffic Data 2B Redacted.xlsx",
+      "txt_sha256": "7ed6a8ee52b8f0c7de975c5a5b2be26dd0346f222a4d8b58775c0d08cd9c3abf",
+      "xlsx_sha256": "859fce70b794b75abcebb6836738d22da61f914a8007792819ef22b2fe258432",
+      "columns": 54,
+      "source_rows": 417064,
+      "repeated_full_rows": 0,
+      "repeated_agency_ids": 0,
+      "candidate_repeated_attribute_rows": 33,
+      "conflicting_agency_id_rows": 0,
+      "invalid_or_out_of_year_dates": 0,
+      "unknown_times": 0,
+      "months": {
+        "2025-01": 8002,
+        "2025-02": 7467,
+        "2025-03": 9502,
+        "2025-04": 11264,
+        "2025-05": 14521,
+        "2025-06": 14590,
+        "2025-07": 44523,
+        "2025-08": 46778,
+        "2025-09": 49731,
+        "2025-10": 52782,
+        "2025-11": 60533,
+        "2025-12": 97371
+      },
+      "agency_count": 622,
+      "sheets": {
+        "xl/worksheets/sheet1.xml": {
+          "rows": 417064,
+          "traffic": true
+        }
+      },
+      "workbook_rows": 417064,
+      "matching_normalized_rows": 417059,
+      "txt_only_rows": 5,
+      "matching_export_equivalent_rows": 417064,
+      "export_substitution_columns": {
+        "VehicleMake": 4,
+        "BeatLocationOfStop": 1
+      },
+      "export_equivalence_rule": "TXT tilde versus XLSX apostrophe in vehicle make or beat; comparison only, never source identity or geography",
+      "workbook_only_rows": 5,
+      "normalized_order_equal": false
+    }
+  ],
+  "overlaps": {
+    "cpd": {
+      "distinct_attribute_rows": 224668,
+      "matching_statewide_attribute_rows": 0,
+      "candidate_agency_codes": {},
+      "matching_statewide_source_rows": {},
+      "candidate_agency_total_source_rows": {},
+      "geographic_identity_verified": false
+    },
+    "lake_bluff": {
+      "distinct_attribute_rows": 1517,
+      "matching_statewide_attribute_rows": 1100,
+      "candidate_agency_codes": {
+        "13478": 1100
+      },
+      "matching_statewide_source_rows": {
+        "13478": 1100
+      },
+      "candidate_agency_total_source_rows": {
+        "13478": 1104
+      },
+      "geographic_identity_verified": false
+    }
+  },
+  "mapped_records_added": 0,
+  "unique_encounters_verified": false,
+  "note": "Full-row matches are candidate repeats, not certified unique encounters. TXT/XLSX alternatives are never summed. Agency codes are not geographic mappings."
+}

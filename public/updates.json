@@ -1,0 +1,11 @@
+{
+  "_note": "Bundled update posts shown in the app's Updates drawer. Give each post a unique id; newest date first.",
+  "posts": [
+    {
+      "id": "2026-11-22-police-radar",
+      "date": "2026-11-22",
+      "title": "Welcome to Police Radar",
+      "body": "Every feature is free. Scanning runs only after you tap Scan, keeps going while you use other apps, and stops when you tap Stop or close the app. Nothing is shared or uploaded."
+    }
+  ]
+}

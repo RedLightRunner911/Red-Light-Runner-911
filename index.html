@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<meta name="theme-color" content="#07080a"/>
+<link rel="manifest" href="./manifest.webmanifest"/>
+<link rel="icon" href="./favicon.png"/>
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png"/>
+<title>Police Radar</title>
+<script>
+/* Site root opens the only UI. The document stays at /v2/index.html so Android
+   appStartPath, /v2/ bookmarks, and hash/query deep links keep the same URL.
+   Capacitor serves extensionless paths as this root file, so /v2/ must land on
+   the real document rather than nesting another /v2/. */
+(function () {
+  var path = location.pathname;
+  if (/\/v2\/index\.html$/i.test(path)) return;
+  var search = location.search, hash = location.hash;
+  if (/\/v2\/?$/i.test(path)) {
+    location.replace((path.endsWith('/') ? path : path + '/') + 'index.html' + search + hash);
+    return;
+  }
+  var root = path.replace(/\/index\.html$/i, '/');
+  if (!root.endsWith('/')) root += '/';
+  location.replace(root + 'v2/index.html' + search + hash);
+})();
+</script>
+</head>
+<body>
+<p><a href="./v2/index.html">Police Radar</a></p>
+</body>
+</html>

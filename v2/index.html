@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1"/>
+<meta name="theme-color" content="#07080a"/>
+<script>
+/* Dark is the first-launch default. Explicit Light, Dark, and Match system choices still win. */
+(function(){try{var p=localStorage.getItem('pr.theme');var dark=p==='light'?false:p==='system'?matchMedia('(prefers-color-scheme: dark)').matches:true;var t=dark?'dark':'light';var h=document.documentElement;h.dataset.theme=t;h.style.colorScheme=t;var c=dark?'#07080a':'#f4f6f8';h.style.background=c;var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('content',c);}catch(e){}})();
+</script>
+<style>html,body{margin:0;background:#07080a;color:#eee}html[data-theme="light"],html[data-theme="light"] body{background:#f4f6f8;color:#16181d}#map-startup{position:fixed;inset:40% 0 auto;text-align:center;font:16px system-ui;pointer-events:none;z-index:500}</style>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/><link rel="manifest" href="../manifest.webmanifest"/><link rel="icon" href="../favicon.png"/><link rel="apple-touch-icon" href="../icons/apple-touch-icon.png"/><title>Police Radar</title></head>
+<body>
+<div id="map"></div>
+<section id="mode-welcome" class="mode-welcome" aria-labelledby="mode-welcome-title">
+  <div class="mode-welcome-inner">
+    <div class="mode-brand"><span class="mode-brand-dot"></span>POLICE RADAR</div>
+    <p class="mode-eyebrow">YOUR DRIVE, YOUR CHOICE</p>
+    <h1 id="mode-welcome-title">What would you like to do today?</h1>
+    <div class="mode-choices">
+      <button id="choose-navigation" type="button" class="mode-choice nav-choice"><span class="mode-choice-icon">↗</span><span><strong>Start Navigation</strong><small>Where to? Plan a drive and get directions.</small></span><span aria-hidden="true">›</span></button>
+      <button id="choose-patrol" type="button" class="mode-choice patrol-choice"><span class="mode-choice-icon">◎</span><span><strong>See what's around you</strong><small>Start Police Radar and view nearby activity.</small></span><span aria-hidden="true">›</span></button>
+    </div>
+  </div>
+</section>
+<button id="change-mode" type="button" class="mode-return" hidden aria-label="Change mode"><span aria-hidden="true">⇄</span> Change Mode</button>
+<aside id="live-hit" class="live-hit" aria-label="Current live match" hidden>
+  <div class="live-hit-heading"><span>LIVE DETECTION</span><small id="live-hit-more" hidden></small></div>
+  <div class="live-hit-reading"><strong id="live-hit-name"></strong><b id="live-hit-score"></b></div>
+  <small class="live-hit-foot">Unverified match · Swipe up for details</small>
+</aside>
+<section id="navigation-panel" class="navigation-panel" hidden aria-label="Navigation destination">
+  <div class="navigation-panel-head"><strong>Navigation</strong></div>
+  <button id="navigation-open-search" type="button" class="navigation-open-search" aria-haspopup="dialog"><span aria-hidden="true">⌕</span><span>Where to?</span><span aria-hidden="true">›</span></button>
+  <div class="navigation-map-controls" role="group" aria-label="Navigation map controls">
+    <button id="navigation-recenter" type="button" aria-label="Recenter on my location" title="Recenter map">◎ <span>My location</span></button>
+    <button id="navigation-3d" type="button" aria-label="Switch to 3D view" aria-pressed="false" title="Switch to 3D view">3D</button>
+  </div>
+  <p id="navigation-provider-status" role="status">Search for a destination to see traffic-aware driving routes.</p>
+</section>
+<section id="navigation-search-screen" class="navigation-search-screen" role="dialog" aria-modal="true" aria-labelledby="navigation-search-title" hidden>
+  <div class="navigation-search-header"><button id="navigation-search-close" type="button" aria-label="Close destination search">←</button><h2 id="navigation-search-title">Where to?</h2></div>
+  <form id="navigation-search-form" class="navigation-search-form" role="search">
+    <label class="sr-only" for="navigation-destination">Search for a destination</label>
+    <input id="navigation-destination" type="search" autocomplete="street-address" maxlength="256" placeholder="Address, city or destination" />
+    <button id="navigation-search" class="navigation-search" type="submit">Search</button>
+  </form>
+  <p id="navigation-search-status" role="status" aria-live="polite">Find an address or choose a place below.</p>
+  <small class="navigation-place-credit">Search data © OpenStreetMap contributors · Photon</small>
+  <section class="navigation-place-section" aria-labelledby="navigation-recent-title">
+    <div class="navigation-list-heading"><h3 id="navigation-recent-title">Recent destinations</h3><button id="navigation-clear-recents" type="button">Clear</button></div>
+    <div id="navigation-recent-list" class="navigation-place-list"></div>
+  </section>
+  <section class="navigation-place-section" aria-labelledby="navigation-saved-title">
+    <h3 id="navigation-saved-title">Saved places <span class="navigation-pin-hint">● pinned</span></h3>
+    <div id="navigation-saved-list" class="navigation-place-list"></div>
+  </section>
+  <section class="navigation-place-section" aria-label="Search matches"><div id="navigation-search-results" class="navigation-place-list"></div></section>
+</section>
+<section id="navigation-driving" class="navigation-driving" aria-label="Turn-by-turn driving guidance" hidden>
+  <div class="navigation-driving-banner" aria-live="polite" aria-atomic="true"><span class="navigation-driving-eyebrow">NEXT TURN</span><strong id="navigation-instruction">Continue</strong><span id="navigation-distance">Preparing GPS guidance…</span></div>
+  <button type="button" id="navigation-driving-recenter" class="navigation-recenter" aria-label="Recenter driving map">◎</button>
+  <div class="navigation-driving-dashboard">
+    <div class="navigation-speed"><strong id="navigation-speed">—</strong><span>MPH</span></div>
+    <div class="navigation-trip-stats"><span class="navigation-arrival-label">ARRIVAL TIME</span><strong id="navigation-eta">—</strong><span id="navigation-time-remaining">— min remaining</span><span id="navigation-trip-distance">— mi left</span></div>
+    <button id="navigation-stop" class="navigation-stop" type="button">End Route</button>
+  </div>
+  <p id="navigation-driving-status" class="navigation-driving-status" role="status">GPS guidance starting…</p>
+</section>
+<div id="map-startup" role="status">Finding your location…</div>
+
+<div class="top">
+  <div class="top-btns"><button id="open-updates" class="icon-btn bell" aria-label="Updates"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg><b id="updates-badge" class="badge-dot" hidden>0</b></button>
+  <button id="open-settings" class="icon-btn" aria-label="Settings"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button></div>
+</div>
+<div id="toast" class="toast" hidden></div>
+<div id="scan-quiet" class="scan-quiet" role="alert" hidden><b>⚠ Bluetooth has gone quiet</b><span>No recent Bluetooth adverts were received. The area may be quiet. Automatic silence restarts are paused; keep the app open or tap Restart.</span><div class="sq-btns"><button id="sq-restart" type="button">Restart scan</button><button id="sq-dismiss" type="button" class="ghost">Dismiss</button></div></div>
+<div id="legend-card" class="legend-card">
+  <div id="map-legend" class="map-legend" aria-label="Map legend"></div>
+  <div id="pill" class="pill idle" role="status" aria-live="polite">
+    <span class="dot"><i></i></span><span id="pill-text">Off</span>
+    <span class="sep"></span><span class="count" title="Police devices found this session"><b id="pill-count">0</b> found</span>
+  </div>
+</div>
+
+<section id="sheet" class="sheet collapsed" aria-label="Detections">
+  <button id="sheet-handle" class="handle" aria-label="Expand detections"><span></span></button>
+  <div class="sheet-head">
+    <div class="sheet-title"><h2>Live detections</h2><small><span id="geo">Locating…</span> · <span class="fine">Receive-only · signatures unverified</span></small></div>
+  </div>
+  <div class="stats" aria-label="Counts by category">
+    <div class="stat" style="--c:var(--axon)"><b id="n-axon">0</b><span>Axon</span></div>
+    <div class="stat" style="--c:var(--moto)"><b id="n-moto">0</b><span>Radio</span></div>
+    <div class="stat" style="--c:var(--other)"><b id="n-other">0</b><span>Other</span></div>
+    <div class="stat" style="--c:var(--wifi)"><b id="n-wifi">0</b><span>📶 Wi-Fi</span></div>
+    <div class="stat" style="--c:var(--unk)"><b id="n-unk">0</b><span>Unknown</span></div>
+  </div>
+  <ul id="cards" class="cards"><li class="empty">No detections yet. Tap <b>Scan</b> to start listening.</li></ul>
+  <p class="disclaimer">Receive-only: never connects, pairs or writes. Signatures unverified; positions are rough estimates. Don't use this to harass or target anyone.</p>
+</section>
+
+<div class="fab-col">
+  <div class="map-ctrls" role="group" aria-label="Map controls">
+    <button id="recenter" class="map-ctrl" aria-label="Recenter on my location" title="Recenter"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
+    <button id="pitch" class="map-ctrl" hidden aria-label="Tilt map" title="Tilt flat / 3D">3D</button>
+  </div>
+  <button id="add" class="icon-btn round" hidden aria-label="Pick another device" title="Pick another device"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+</div>
+<button id="scan" class="fab" aria-label="Start scan"><span class="fab-ring"></span><span class="fab-ring r2"></span><span class="fab-core"><span class="fab-ico" aria-hidden="true"></span><span id="scan-label">Scan</span></span></button>
+
+<div id="scrim" class="scrim" hidden></div>
+<aside id="settings" class="drawer" aria-label="Settings" aria-hidden="true">
+  <header><h2>Settings</h2><button id="close-settings" class="icon-btn" aria-label="Close"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
+  <div class="control-status"><span class="status-kicker">SCANNER STATUS</span><strong id="settings-scan-status">Scan is stopped</strong><span id="settings-mode">Scan mode: Balanced</span><div id="status-full" class="status-full" role="status">Idle</div><button type="button" id="check-setup" class="setup-button">Check my setup <span aria-hidden="true">›</span></button></div>
+  <div id="setup-results" class="setup-results" hidden aria-live="polite"></div>
+  <button type="button" id="settings-change-mode" class="settings-pro"><span><b>Change mode</b><small>Switch between navigation and seeing what's around you</small></span><i aria-hidden="true">›</i></button>
+
+  <details class="settings-section" id="appearance-section"><summary><span><b>Appearance</b><small id="appearance-summary">Dark</small></span></summary>
+  <div class="group">
+    <div class="field"><span>Theme</span>
+      <select id="theme" data-seg data-labels="Light|Dark|Match system"><option value="light">Light</option><option value="dark" selected>Dark</option><option value="system">Match system</option></select>
+      <small>Match system follows this phone's dark mode and updates if you change it.</small></div>
+  </div>
+  </details>
+
+  <details class="settings-section" id="scanning-section"><summary><span><b>Scanning</b><small id="scanning-section-summary">Scan mode and device filter</small></span></summary>
+  <div class="group">
+    <label class="field" id="backend-wrap">Scanner backend
+      <select id="backend"><option value="mock">Mock (simulated)</option><option value="web">Web Bluetooth (Chrome / Android)</option><option value="bluefy">Bluefy (iPhone): pick devices</option><option value="native">Android app</option></select></label>
+    <div class="field" id="scanmode-wrap"><span>Android app scan mode</span>
+      <select id="scanmode" data-seg data-labels="Saver|Balanced|Fastest"><option value="lowPower">Battery saver (slower)</option><option value="balanced" selected>Balanced</option><option value="lowLatency">Fastest (more battery)</option></select>
+      <small>Saver uses less battery; Balanced balances battery and scan frequency; Fastest scans more often and uses more battery. Results and range vary by phone and conditions.</small></div>
+    <small class="scan-session-note">Scanning starts only when you tap Scan. It keeps working while you switch to other apps (a notification shows it is on) and stops when you tap Stop, tap Stop in the notification, or close the app.</small>
+    <button type="button" id="battery" class="row-btn" hidden>Keep scanning reliable while using other apps (battery settings)</button>
+    <details class="advanced-scan"><summary>Advanced settings</summary>
+    <input id="picker" type="hidden" value="police"/>
+    <label class="switch"><input type="checkbox" id="showother"/><span></span><em>Show other devices<small>Phones and earbuds are hidden by default. Police matching and screen-off alerts continue using the Android filtered scanner.</small></em></label></details>
+  </div>
+
+  </details>
+
+  <details class="settings-section" id="layers-section"><summary><span><b>Map layers</b><small id="layers-section-summary">Cameras and Stop History</small></span></summary>
+  <div class="group">
+    <label class="switch"><input type="checkbox" id="flockmap" checked/><span></span><em>Flock camera (mapped)<small>Known Flock plate-reader cameras from OpenStreetMap. Not scan hits. © OpenStreetMap contributors (ODbL)</small></em></label>
+    <small id="flock-status">Loading mapped cameras…</small>
+    <button type="button" id="open-tc" class="nav-row"><span><b>Traffic cameras</b><small id="tc-summary">Traffic camera pins and alerts</small></span><i aria-hidden="true">›</i></button>
+    <button type="button" id="open-heat" class="nav-row"><span><b>Stop history</b><small id="heat-summary">Shading off</small></span><i aria-hidden="true">›</i></button>
+  </div>
+
+  </details>
+
+  <details class="settings-section" id="travel-section"><summary><span><b>Map &amp; travel</b><small id="travel-section-summary">Travel mode and 3D buildings</small></span></summary>
+  <div class="group">
+    <div class="field"><span>Travel mode</span>
+      <select id="travelmode" data-seg data-labels="Car|On foot"><option value="car" selected>Car</option><option value="foot">On foot</option></select>
+      <small>Car: tuned for driving. On foot: shorter expected range, filters faint non-police signals, smooths more and waits longer before grouping.</small></div>
+    <label class="switch"><input type="checkbox" id="map3d"/><span></span><em>3D buildings<small>Tilted map with extruded buildings. Uses more battery; your dot and follow-me still work.</small></em></label>
+  </div>
+
+  </details>
+
+  <details class="settings-section" id="alerts-section"><summary><span><b>Alerts &amp; sound</b><small id="alerts-section-summary">Police ping and camera alerts</small></span></summary>
+  <div class="group">
+    <label class="switch"><input type="checkbox" id="sound" checked/><span></span><em>Police ping sound<small>Turn off for quiet alerts</small></em></label>
+    <button type="button" id="sound-sample" class="row-btn">▶ Play sample</button>
+    <label class="switch" id="vibrate-wrap"><input type="checkbox" id="ping-vibrate"/><span></span><em>Vibrate for police alerts<small>While the app is open; phone settings may affect vibration.</small></em></label>
+  </div>
+
+  </details>
+
+  <details class="settings-section" id="crowd-section" hidden><summary><span><b>Crowd map</b><small id="crowd-section-summary">Sharing and community layer</small></span></summary>
+  <div class="group">
+    <label class="switch"><input type="checkbox" id="crowdshare"/><span></span><em>Share police-gear hits</em></label>
+    <small>Shares an approximate area when police gear is detected.</small><details class="crowd-note"><summary>How sharing works</summary><p>Off by default. Sends only a ~200 m area, 5-minute time slot, gear type and confidence level, with a random ID that changes every session. Never device IDs, signal data, your exact location or who you are.</p></details>
+    <label class="switch"><input type="checkbox" id="crowd" checked/><span></span><em>Show crowd layer<small>Other users, ≥12 min delayed</small></em></label>
+    <small id="crowd-status">Loading…</small>
+  </div>
+
+  </details>
+
+  <button type="button" id="open-pro-settings" class="settings-pro" hidden><span><b>Police Radar Pro</b><small>Pro camera pins, paid camera alerts, and Stop History filters; school/work-zone alerts stay free</small></span><i aria-hidden="true">›</i></button>
+  <p id="founding-tester" class="founding-tester" hidden>Founding tester: Pro unlocked</p>
+
+  <details class="settings-section" id="help-section"><summary><span><b>Help &amp; privacy</b><small>Tutorial and privacy</small></span></summary>
+    <details id="help" class="group help" hidden><summary>Not seeing police on the map?</summary>
+    <div class="help-body">
+      <p>Sometimes police gear doesn't show up. A short recording helps fix that. Here's how to send one:</p>
+      <ol>
+        <li><b>Scan.</b> Use the Android app if you can, and set <b>Android app scan mode</b> to <b>Fastest</b> (Settings → Scanning). Tap <b>Scan</b>.</li>
+        <li><b>Record.</b> When you're near police, pull up the <b>Live detections</b> panel and tap <b>● Record</b>.</li>
+        <li><b>Keep recording a few minutes</b> while you stay nearby (only when it's safe).</li>
+        <li>Tap <b>■ Stop rec</b>. <b>Android app:</b> tap <b>Share file</b>, pick Gmail (or any email app), send it to <b>percolatorbiz@gmail.com</b> and add a short note: what you saw and roughly when. Done.</li>
+        <li><b>Web:</b> tap <b>Export</b> to save the <code>police-radar-session-….json</code> file, then tap <b>Email the debug file</b> below and <b>attach the exported file</b>.</li>
+      </ol>
+      <a id="mail-debug" class="mail-btn" href="#">✉️ Email the debug file</a>
+      <small>Sends to <b>percolatorbiz@gmail.com</b> from your own email app. On the web the file can't be attached automatically, so attach it yourself.</small>
+      <small class="help-privacy"><b>What's in the file:</b> only police-gear matches (other devices are dropped), device IDs that are scrambled and change every session, ~150 m map areas (never your exact location), signal strength and times, the matched signal data with serial-like text masked, and scan-health counts. No MAC addresses, device names or Wi-Fi network names. A Wi-Fi row is one access point when the phone can tell them apart, and only the signature name when it cannot. It is not one vehicle. "Vehicle arrived" and "Vehicle left" are times you mark yourself.</small>
+    </div>
+  </details>
+
+  <button type="button" id="replay-tour" class="row-btn">Replay tutorial</button>
+
+  <h3 class="group-title">Privacy</h3>
+  <div class="group privacy">
+    <ul>
+      <li>Receive-only: never connects, pairs or writes to a device.</li>
+      <li>Device IDs are salted hashes that change every session.</li>
+      <li>Saved locations are ~200 m areas; your exact spot stays on screen only.</li>
+      <li>Nothing is shared or uploaded: no crowd map, no chat, no account.</li>
+      <li>Location and Bluetooth are used only while a scan is running. A notification shows whenever it is on.</li>
+    </ul>
+  </div>
+
+  <details id="debug" class="group" hidden><summary>Debug</summary>
+    <div class="grid">
+      <span>backend</span><b id="d-backend">-</b><span>mode</span><b id="d-mode">-</b>
+      <span>adverts seen</span><b id="d-raw">0</b><span>unmatched</span><b id="d-unmatched">0</b>
+      <span>matched</span><b id="d-matched">0</b><span>devices</span><b id="d-devs">0</b>
+      <span>police-gear</span><b id="d-pdevs">0</b><span>last advert</span><b id="d-last">never</b>
+    </div>
+    <div id="d-env" class="mono"></div><pre id="d-probe" class="mono"></pre>
+    <h3>Event log</h3><ul id="log" class="log"></ul>
+  </details>
+  </details>
+</aside>
+<aside id="tc-settings" class="drawer sub" aria-label="Traffic cameras" aria-hidden="true">
+  <header><button id="back-tc" class="icon-btn" aria-label="Back to Settings"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></button><h2>Traffic cameras</h2><span class="hdr-spacer"></span></header>
+  <div class="pro-offer" id="tc-pro-offer" hidden><div class="pro-offer-head"><b>Police Radar Pro</b><span class="pro-mark">$1.99/month</span></div><p>Unlock traffic-camera map pins and upcoming-camera alerts for speed, red-light and traffic-monitoring cameras. School-zone and work-zone alerts are included for everyone.</p><p id="tc-trial-note" hidden></p><button type="button" id="tc-upgrade" class="pro-upgrade">Explore Police Radar Pro</button><small>Open Pro settings to check Google Play subscription availability.</small></div>
+  <div class="tc-pro-controls">
+  <h3 class="group-title">On the map</h3>
+  <div class="group">
+    <label class="switch"><input type="checkbox" id="trafficcams" checked/><span></span><em>Show traffic cameras<small>Speed, red-light, school-zone, work-zone and traffic-monitoring cameras across the US. Mapped locations, not scan hits.</small></em></label>
+    <small id="tc-status">Loading traffic cameras…</small>
+  </div>
+  <h3 class="group-title">Camera types</h3>
+  <div class="group" id="tc-types">
+    <label class="switch"><input type="checkbox" id="tc-show-speed" checked/><span></span><em><b class="tc-lbl"><i class="tcam tcam-speed"></i>Speed cameras</b></em></label>
+    <label class="switch"><input type="checkbox" id="tc-show-red_light" checked/><span></span><em><b class="tc-lbl"><i class="tcam tcam-red_light"></i>Red-light cameras</b></em></label>
+    <label class="switch"><input type="checkbox" id="tc-show-school_zone" checked/><span></span><em><b class="tc-lbl"><i class="tcam tcam-school_zone"></i>School-zone cameras</b></em></label>
+    <label class="switch"><input type="checkbox" id="tc-show-work_zone" checked/><span></span><em><b class="tc-lbl"><i class="tcam tcam-work_zone"></i>Work-zone enforcement</b></em></label>
+    <label class="switch"><input type="checkbox" id="tc-show-monitor" checked/><span></span><em><b class="tc-lbl"><i class="tcam tcam-monitor"></i>Traffic monitoring cameras</b></em></label>
+    <small>A hidden type is also never alerted. School-zone and work-zone alerts still work when the map pins are locked.</small>
+  </div>
+  </div>
+  <h3 class="group-title">Alerts</h3>
+  <div class="group" id="tc-alerts">
+    <div class="field"><span>Upcoming-camera alerts</span>
+      <select id="tc-alerts-on" data-seg data-labels="Off|On"><option value="off">Off</option><option value="on" selected>On</option></select>
+      <small>Off means no camera alerts at all.</small></div>
+    <div class="field tc-dep"><span>Alert me for</span><div class="chips"><label class="chip"><input type="checkbox" id="tc-alert-speed"/><span><i class="tcam tcam-speed"></i>Speed</span></label><label class="chip"><input type="checkbox" id="tc-alert-red_light"/><span><i class="tcam tcam-red_light"></i>Red-light</span></label><label class="chip"><input type="checkbox" id="tc-alert-school_zone"/><span><i class="tcam tcam-school_zone"></i>School-zone</span></label><label class="chip"><input type="checkbox" id="tc-alert-work_zone"/><span><i class="tcam tcam-work_zone"></i>Work-zone</span></label><label class="chip"><input type="checkbox" id="tc-alert-monitor"/><span><i class="tcam tcam-monitor"></i>Traffic monitoring</span></label></div></div>
+    <div class="field tc-dep"><span>Alert distance</span>
+      <select id="tc-distance" data-seg data-labels="Auto|150 m|300 m|500 m"><option value="auto" selected>Auto</option><option value="150">150 m</option><option value="300">300 m</option><option value="500">500 m</option></select>
+      <small id="tc-distance-note">Auto: car 250–600 m by speed (400 m when unknown); on foot 100 m. Uses Travel mode.</small></div>
+    <label class="switch tc-dep"><input type="checkbox" id="tc-ahead" checked/><span></span><em>Only cameras ahead of me<small>Uses your direction of travel and the camera direction when known (within ~45°).</small></em></label>
+    <div class="field tc-dep"><span>Alert style</span>
+      <select id="tc-style" data-seg data-labels="Sound + vibrate|Vibrate|Silent"><option value="sound" selected>Sound + vibration</option><option value="vibrate">Vibration only</option><option value="silent">Silent banner</option></select>
+      <small>Every style shows a banner. The same camera won't alert again for 10 min.</small></div>
+    <small class="tc-priv">Alerts are worked out on this phone from your live location, which is never saved or sent. School-zone and work-zone alerts stay on even without Pro.</small>
+  </div>
+  <h3 class="group-title">Sources</h3>
+  <div class="group"><small class="tc-credits">© OpenStreetMap contributors (ODbL 1.0); City of Chicago Data Portal; DC DDOT Automated Safety Cameras (CC BY 4.0); Seattle SDOT ATSC; Arlington County VA. Locations can be out of date.</small></div>
+</aside>
+<div id="tc-banner" class="tc-banner" role="status" aria-live="assertive" hidden></div>
+<div id="history-zone-banner" class="history-zone-banner" role="status" aria-live="polite" hidden>
+  <small>HISTORICAL STOP ACTIVITY</small>
+  <strong id="history-zone-title">Very High activity</strong>
+  <span id="history-zone-detail"></span>
+  <small>Historical records, not live police detection</small>
+</div>
+<aside id="heat-settings" class="drawer sub" aria-label="Stop history" aria-hidden="true">
+  <header><button id="back-heat" class="icon-btn" aria-label="Back to Settings"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></button><h2>Stop history</h2><span class="hdr-spacer"></span></header>
+  <p id="heat-coverage" class="heat-coverage" role="status">Stop history is only available for: New York City · Chicago, Springfield, Champaign and Urbana, IL · Cincinnati, OH · Montgomery County, MD · San Francisco, CA (2007–2016) · Montana and Vermont state police (2009–2017).</p>
+  <h3 class="group-title">On the map</h3>
+  <div class="group">
+    <label class="switch"><input type="checkbox" id="stopheat" disabled aria-describedby="heat-pro-offer" aria-label="Show historical shading (Pro subscription required)"/><span></span><em>Show historical shading<small>Off until you turn it on. Historical records, not live police detection.</small></em></label>
+    <label class="switch"><input type="checkbox" id="history-zone-alerts" disabled aria-describedby="heat-pro-offer" aria-label="Historical activity zone alerts (Pro subscription required)"/><span></span><em>Historical activity zone alerts<small>Off until you turn this on. Brief on-screen notice for areas with relatively high recorded stop density. Historical records, not live police detection. No sound.</small></em></label>
+    <label class="field">Show alerts for
+      <select id="history-zone-threshold" disabled aria-describedby="heat-pro-offer" aria-label="Historical activity zone threshold (Pro subscription required)"><option value="very-high">Very High only</option><option value="high">High and Very High</option></select>
+    </label>
+    <small id="history-zone-pro-note" hidden>Included with Police Radar Pro. Subscribe or restore with the Pro offer on this page. School-zone and work-zone alerts stay free.</small>
+    <small id="history-zone-current">Historical activity zone notices are off until you turn them on.</small>
+    <small>Rankings compare 2025 stops per area within each city's mapped police beats or districts: Very High, High, Typical or Low. No ranking where only citywide totals exist (such as Urbana). These are historical records, not a probability of police being present.</small>
+    <div class="pro-offer" id="heat-pro-offer" hidden><div class="pro-offer-head"><b>Police Radar Pro</b><span class="pro-mark" id="pro-price">$1.99/month</span></div><p>Unlock traffic-camera map pins and speed, red-light and monitoring alerts, year, time-of-day and weekday filters, and historical activity zone notices. Stop History shading is included with Pro. School-zone and work-zone alerts stay free.</p><p id="pro-trial-note" hidden></p><button type="button" id="heat-upgrade" class="pro-upgrade" disabled>Subscribe with Google Play</button><button type="button" id="pro-restore" class="row-btn">Restore Google Play purchase</button><small>Billed monthly by Google Play. Cancel anytime through <a href="https://play.google.com/store/account/subscriptions">Google Play subscriptions</a>. Pro unlocks only after secure verification.</small></div><div id="founder-claim" class="pro-offer" hidden><b>Founding tester who reinstalled?</b><p>If you moved to a new phone or Pro did not come back after reinstalling, enter the one-time founder code we sent you.</p><input id="founder-code" type="text" autocomplete="off" placeholder="Founding tester code" aria-label="Founding tester code"/><button type="button" id="founder-activate" class="row-btn">Activate complimentary Pro</button></div><p id="pro-billing-status" role="status" aria-live="polite" hidden></p>
+    <small id="heat-status">Loading stop history…</small>
+    <p class="heat-disclaimer">Official data can be months or years behind. Many places are beat-level only. Coverage is incomplete and uneven: stronger where a city already publishes, thinner elsewhere.</p>
+    <div class="heat-ramp" aria-label="Stop history color scale, fewer to more historical stops"><span><i id="heat-sw-1"></i>Fewer</span><span><i id="heat-sw-2"></i></span><span><i id="heat-sw-3"></i></span><span><i id="heat-sw-4"></i>More</span></div>
+    <small>Stop History shading stays off until you turn it on and is visual-only. Historical zone notices also stay off until you turn them on. They are separate from map shading. Filters and source details stay here.</small>
+  </div>
+  <h3 class="group-title">Period</h3>
+  <div class="group">
+    <label class="field">Year<select id="heat-year-set" aria-label="Year"><option value="">All years</option></select></label>
+    <label class="field">Time of day<select id="heat-tod-set" aria-label="Time of day"><option value="">All hours</option></select></label>
+    <label class="field">Day of week<select id="heat-dow-set" aria-label="Day of week"><option value="">All days</option></select></label>
+    <small id="heat-filter-note" hidden>Year, time-of-day, and weekday filters are included with Pro. Stop History shading is included with Pro.</small>
+  </div>
+  <h3 class="group-title">Sources</h3>
+  <div class="group"><details id="illinois-agencies"><summary>Illinois stops by reporting agency · 2025</summary></details></div>
+  <div class="group"><div id="heat-sources" class="heat-sources"></div></div>
+  <h3 class="group-title">Listed, not shaded</h3>
+  <div class="group"><div id="heat-gaps" class="heat-sources"></div></div>
+  <p class="heat-subnote">Historical records have uneven coverage and may be years old. Source links and attribution remain available to everyone.</p>
+</aside>
+<aside id="updates" class="drawer" aria-label="Updates" aria-hidden="true">
+  <header><h2>Updates</h2><button id="close-updates" class="icon-btn" aria-label="Close"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
+  <ul id="updates-list" class="updates-list"><li class="empty">Loading…</li></ul>
+  <button type="button" id="updates-help" class="help-link" hidden>Not seeing police on the map? Send debug info →</button>
+</aside>
+<script type="module" src="/src/v2/main.ts"></script>
+</body></html>

@@ -1,0 +1,8 @@
+{
+  "appId": "com.example.policeradar",
+  "appName": "Police Radar",
+  "webDir": "dist",
+  "server": { "appStartPath": "/v2/index.html" },
+  "backgroundColor": "#07080a",
+  "android": { "allowMixedContent": false }
+}

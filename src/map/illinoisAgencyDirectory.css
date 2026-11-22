@@ -1,0 +1,7 @@
+#illinois-agencies summary { cursor: pointer; padding: .5rem 0; }
+.il-directory-body { max-width: 36rem; padding: 0 .5rem .5rem; }
+.il-directory-body input { width: 100%; box-sizing: border-box; padding: .5rem; font: inherit; }
+.il-directory-body small { display: block; margin: .35rem 0; }
+.il-directory-body ul { padding: 0; list-style: none; }
+.il-directory-body li { padding: .4rem 0; }
+.il-directory-body button + button { margin-left: .5rem; }

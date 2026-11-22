@@ -1,0 +1,7 @@
+# Both functions validate authentication themselves.
+# pro-entitlement: Supabase GoTrue access token. pro-rtdn: Google Pub/Sub OIDC token.
+[functions.pro-entitlement]
+verify_jwt = false
+
+[functions.pro-rtdn]
+verify_jwt = false

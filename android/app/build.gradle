@@ -1,0 +1,105 @@
+apply plugin: 'com.android.application'
+
+android {
+    namespace "io.github.missionaryj.patrolradar"
+    // Keep the optional native implementation out of normal release builds until validated.
+    if (System.getenv('MAPBOX_NAV_SDK_ENABLED') == 'true' &&
+        (System.getenv('MAPBOX_DOWNLOADS_TOKEN') ?: rootProject.findProperty('MAPBOX_DOWNLOADS_TOKEN'))) {
+        sourceSets.main.java.srcDirs += 'src/mapbox/java'
+    }
+    compileSdk rootProject.ext.compileSdkVersion
+    defaultConfig {
+        // App ID comes from the APP_ID repository variable (Settings > Secrets and variables > Actions > Variables).
+        // Without it, builds use a placeholder that is fine for testing but cannot be published.
+        def appId = (System.getenv("APP_ID") ?: "").trim()
+        if (!appId) appId = "com.example.policeradar"
+        if (!(appId ==~ /[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+/)) {
+            throw new GradleException("APP_ID must look like com.yourname.policeradar (lowercase, dots, no part starting with a number)")
+        }
+        applicationId appId
+        resValue "string", "package_name", appId
+        resValue "string", "custom_url_scheme", appId
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode((System.getenv("VERSION_CODE") ?: "1") as int)
+        // versionName is package.json. versionCode is VERSION_CODE, the workflow run number.
+        versionName(System.getenv("VERSION_NAME") ?: new groovy.json.JsonSlurper().parse(file("../../package.json")).version)
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        // Public runtime token; never use the secret Maven downloads token here.
+        def publicToken = (System.getenv("VITE_MAPBOX_PUBLIC_TOKEN") ?: "").trim()
+        if (publicToken && !publicToken.startsWith("pk.")) {
+            throw new GradleException("VITE_MAPBOX_PUBLIC_TOKEN must start with pk.")
+        }
+        resValue "string", "mapbox_access_token", publicToken
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    signingConfigs {
+        debug {
+            // Fixed, public debug key so every CI build installs over the previous one. Not a release key.
+            storeFile file('debug.keystore'); storePassword 'android'; keyAlias 'androiddebugkey'; keyPassword 'android'
+        }
+        // Play upload key. Never committed: CI writes the keystore from secrets, locally point at /home/box/secrets.
+        if (System.getenv('ANDROID_UPLOAD_KEYSTORE')) {
+            release {
+                storeFile file(System.getenv('ANDROID_UPLOAD_KEYSTORE'))
+                storePassword System.getenv('ANDROID_UPLOAD_STORE_PASSWORD')
+                keyAlias System.getenv('ANDROID_UPLOAD_KEY_ALIAS')
+                keyPassword System.getenv('ANDROID_UPLOAD_KEY_PASSWORD')
+            }
+        }
+    }
+    buildTypes {
+        debug { signingConfig signingConfigs.debug }
+        release {
+            // Shrink and obfuscate. Resource shrinking stays off: Capacitor looks up some
+            // mipmap, drawable, and raw files by name (AssetUtil.getIdentifier).
+            minifyEnabled true
+            // Package native debug symbols when a dependency still has them. Mapbox's
+            // published .so files are already stripped, so this is a no-op for those libs.
+            ndk { debugSymbolLevel 'FULL' }
+            if (System.getenv('ANDROID_UPLOAD_KEYSTORE')) { signingConfig signingConfigs.release }
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    // Play Billing. Checkout is PlayBillingPlugin; Pro is granted only after the server verifies the purchase.
+    implementation "com.android.billingclient:billing:9.1.0"
+    // Native Mapbox Navigation SDK. Included only when MAPBOX_NAV_SDK_ENABLED=true and a downloads token is set.
+    // MapboxNavPlugin then runs turn-by-turn guidance. The downloads token is a build secret and is not packaged.
+    if (System.getenv('MAPBOX_NAV_SDK_ENABLED') == 'true' &&
+        (System.getenv('MAPBOX_DOWNLOADS_TOKEN') ?: rootProject.findProperty('MAPBOX_DOWNLOADS_TOKEN'))) {
+        implementation "com.mapbox.navigationcore:android-ndk27:3.34.2"
+    }
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}

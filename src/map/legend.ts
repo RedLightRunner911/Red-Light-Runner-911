@@ -1,0 +1,49 @@
+/** One collapsible, categorised map legend. Only open/closed state is stored locally. */
+export const LEGEND_KEY = 'pr.legend.v1';
+interface Item { sw: string; label: string }
+export interface LegendCat { id: string; title: string; items: Item[] }
+import { TC_META, TC_TYPES, tcIcon } from './trafficCamLayer';
+import { heatPaint } from './stopHeatLayer';
+const heatSw = (n: number) => `<i class="lg-sw lg-sq" style="background:${heatPaint(n).css}"></i>`;
+const dot = (bg: string, extra = '') => `<i class="lg-sw" style="background:${bg};${extra}"></i>`;
+export const LEGEND: LegendCat[] = [
+  { id: 'gear', title: 'Police gear', items: [
+    { sw: dot('#e53935'), label: 'Axon' }, { sw: dot('#fb8c00'), label: 'Radio' },
+    { sw: dot('#ab47bc'), label: 'ALPR' }, { sw: dot('#fdd835'), label: 'Other' }, { sw: dot('#8a9bb0'), label: 'Unknown' }] },
+  { id: 'wifi', title: 'Wi-Fi', items: [
+    { sw: dot('transparent', 'border:2px dashed #2979ff'), label: 'Wi-Fi hit' }, { sw: dot('#2979ff'), label: 'Cradlepoint' }] },
+  { id: 'tcam', title: 'Traffic cameras', items: TC_TYPES.map(t => ({ sw: tcIcon(t), label: TC_META[t].short })) },
+  { id: 'heat', title: 'Stop history', items: [
+    { sw: heatSw(1), label: '1+' }, { sw: heatSw(10), label: '10+' },
+    { sw: heatSw(100), label: '100+' }, { sw: heatSw(1000), label: '1k+' }] },
+  { id: 'grade', title: 'How sure is a detection', items: [
+    { sw: '<b class="lg-g">S</b>', label: 'Strong match' }, { sw: '<b class="lg-g">L</b>', label: 'Likely match' }, { sw: '<b class="lg-g">H</b>', label: 'Weak hint' }] },
+];
+/** Always-visible preview row (collapsed and expanded). */
+export const PEEK: Item[] = [
+  { sw: dot('#00e5ff'), label: 'Flock camera' },
+  { sw: dot('#2a7fff', 'border:2px solid #fff;box-sizing:border-box'), label: 'You' },
+  { sw: dot('rgba(238,51,51,.45)', 'border:1.5px solid #e33;box-sizing:border-box'), label: 'Gear hit' },
+];
+export interface LegendState { open: boolean; cats: Record<string, boolean> }
+export function loadLegendState(s: Pick<Storage, 'getItem'> | undefined): LegendState {
+  try { const v = JSON.parse(s?.getItem(LEGEND_KEY) ?? ''); if (v && typeof v.open === 'boolean') return { open: v.open, cats: v.cats ?? {} }; } catch { /* default */ }
+  return { open: false, cats: {} };
+}
+/** Traffic-camera symbols are a Pro feature; Flock stays in the peek row for everyone. */
+export function legendCategories(opts: { trafficCameras?: boolean } = {}): LegendCat[] {
+  return opts.trafficCameras === false ? LEGEND.filter(c => c.id !== 'tcam') : LEGEND;
+}
+export function legendHtml(st: LegendState, cats = LEGEND): string {
+  return `<details class="lg"${st.open ? ' open' : ''}><summary class="lg-head"><span class="lg-top"><span>Legend</span><span class="lg-chev" aria-hidden="true"></span></span><span class="lg-peek">${PEEK.map(i => `<span>${i.sw}${i.label}</span>`).join('')}</span></summary><div class="lg-body">${
+    cats.map(c => `<details class="lg-cat" data-cat="${c.id}"${st.cats[c.id] === true ? ' open' : ''}><summary>${c.title}<span class="lg-chev" aria-hidden="true"></span></summary>${`<div class="lg-grid">${c.items.map(i => `<div class="lg-row">${i.sw}<span>${i.label}</span></div>`).join('')}</div>`}</details>`).join('')
+  }</div></details>`;
+}
+/** Render into el and persist toggles. */
+export function mountLegend(el: HTMLElement, store: Storage | undefined = globalThis.localStorage, opts: { trafficCameras?: boolean } = {}) {
+  const st = loadLegendState(store); el.innerHTML = legendHtml(st, legendCategories(opts));
+  const save = () => { try { store?.setItem(LEGEND_KEY, JSON.stringify(st)); } catch { /* ignore */ } };
+  const top = el.querySelector('details.lg') as HTMLDetailsElement;
+  top.addEventListener('toggle', () => { st.open = top.open; save(); });
+  el.querySelectorAll<HTMLDetailsElement>('details.lg-cat').forEach(d => d.addEventListener('toggle', () => { st.cats[d.dataset.cat!] = d.open; save(); }));
+}

@@ -1,0 +1,121 @@
+{
+ "review_date": "2026-11-16",
+ "file1": {
+  "used": "idot1_four_cities.txt",
+  "sha256": "a5b455c98d97078e416b07d8ad6d139389c47550c9527e2aab045ba9fcb4b56c",
+  "note": "Filtered slice of 2025 Traffic Data 1 Redacted .txt containing only agency codes 13805, 13111, 13100 and 13588. SHA-256 does not match the full-file audit receipt 356454bf0dd633e3133471ab114c8705c96f9c98f4ea42812dd40a69dda3e862. Four-city totals were verified against agencies.json instead."
+ },
+ "file2a": {
+  "name": "2025 Traffic Data 2A Redacted .txt",
+  "sha256": "429c47091f4d75ea4eef1d5864e06104d6f3cb311e1116d487eb12d35afe3921",
+  "matches_audit": true
+ },
+ "file2b": {
+  "name": "2025 Traffic Data 2B Redacted.txt",
+  "sha256": "7ed6a8ee52b8f0c7de975c5a5b2be26dd0346f222a4d8b58775c0d08cd9c3abf",
+  "matches_audit": true
+ },
+ "agency_totals_verified": {
+  "13805": 9934,
+  "13111": 4701,
+  "13100": 1775,
+  "13588": 5245
+ },
+ "springfield": {
+  "mapped": 9934,
+  "unmapped": 0,
+  "beats": 8,
+  "beat_counts": {
+   "100": 1016,
+   "200": 1380,
+   "300": 1426,
+   "400": 1356,
+   "500": 1987,
+   "600": 1073,
+   "700": 948,
+   "800": 748
+  },
+  "boundary_url": "https://maps.springfield.il.us/server/rest/services/SPD/Beat/FeatureServer/0/query?where=1%3D1&outFields=*&returnGeometry=true&outSR=4326&f=geojson",
+  "boundary_download_sha256": "c3f041eee4d6b23f8b8bae314d9f64a60bea51b0b46a60aed6a0e51c671e8abe",
+  "boundary_committed_sha256": "6e7efb6b6acb07bb5bdd58eb8899c846c424ae7ed3c0de69583f772c094f6f66",
+  "retrieved": "2026-11-16"
+ },
+ "champaign": {
+  "mapped": 4691,
+  "unmapped": 10,
+  "districts": 4,
+  "mapping": {
+   "CHN": "North",
+   "CHS": "South",
+   "CHNW": "Northwest",
+   "CHSW": "Southwest"
+  },
+  "mapping_rule": "case-insensitive exact match of the stripped location code",
+  "mapped_code_counts": {
+   "CHN": 1457,
+   "CHS": 1120,
+   "CHNW": 1067,
+   "CHSW": 1002,
+   "chs": 20,
+   "chn": 10,
+   "chnw": 8,
+   "chsw": 4,
+   "CHs": 2,
+   "cHN": 1
+  },
+  "district_counts": {
+   "North": 1468,
+   "Northwest": 1075,
+   "South": 1142,
+   "Southwest": 1006
+  },
+  "unmatched": {
+   "CHW": 2,
+   "740": 1,
+   "796": 1,
+   "CHNNW": 1,
+   "CNW": 1,
+   "S": 1,
+   "SHW": 1,
+   "URBANA": 1,
+   "Urb": 1
+  },
+  "boundary_url": "https://gisportal.champaignil.gov/ms/rest/services/Open_Data/Open_Data/MapServer/26/query?where=1%3D1&outFields=*&returnGeometry=true&outSR=4326&f=geojson",
+  "boundary_download_sha256": "806d3cee8babe1c82b532be9800c491aa71ecf1fe932e2f13dd21505933e06b2",
+  "boundary_committed_sha256": "7fffc8949cfd169ae0fcc2e33b95d510c0afc4233178ae5f4747cffd9e20b0ce",
+  "retrieved": "2026-11-16",
+  "note": "Officer name, email and phone were stripped from the committed district snapshot."
+ },
+ "urbana": {
+  "rows": 1775,
+  "codes": {
+   "64": 458,
+   "62": 414,
+   "65": 353,
+   "61": 310,
+   "63": 234,
+   "6": 2,
+   "624": 1,
+   "69": 1,
+   "CHN": 1,
+   "CHS": 1
+  },
+  "note": "Most rows use beats 61-65 (1,769). Six other location codes appear on 6 rows. No free public boundary file is available, so nothing is shaded."
+ },
+ "decatur": {
+  "rows": 5245,
+  "codes": {
+   "810": 1206,
+   "801": 893,
+   "807": 519,
+   "804": 505,
+   "806": 498,
+   "802": 453,
+   "803": 373,
+   "809": 323,
+   "805": 254,
+   "808": 221
+  },
+  "note": "Codes 801-810 appear on every row. No free public boundary file is available, so nothing is shaded."
+ }
+}

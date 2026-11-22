@@ -1,0 +1,48 @@
+import { SessionRecorder, type FieldLabel } from './recorder';
+import { SIGHTING_NOTE } from '../wifi/identity';
+import { exportSession, isNativeShare } from './share';
+declare const __APP_VERSION__: string;
+const ver = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev';
+
+/** Mounts Record/Stop · Export · Clear + live counts into `host`. Optional loc is coarsened inside the recorder. */
+export function mountRecorder(host: HTMLElement, rec: SessionRecorder, backend: () => string, loc?: () => { lat: number; lng: number } | undefined) {
+  const box = document.createElement('div'); box.className = 'recorder'; box.id = 'recorder';
+  box.innerHTML = `<button id="rec-toggle" class="rec-btn"></button><button id="rec-export">${isNativeShare() ? 'Share file' : 'Export'}</button><button id="rec-clear">Clear</button>
+    <span class="rec-stats"><b id="rec-count">0</b> adverts · <b id="rec-devs">0</b> devices</span>
+    <label class="rec-label" style="font-size:13px">Field test: <select id="rec-label" aria-label="Field-test label">
+      <option value="">no label</option><option value="police-present">police present</option><option value="not-present">not present</option><option value="unsure">unsure</option>
+    </select></label>
+    <div class="sightings" role="group" aria-label="Vehicle you saw">
+      <button type="button" id="sight-arrived">Vehicle arrived</button>
+      <button type="button" id="sight-left">Vehicle left</button>
+      <small class="sight-note" id="sight-note">${SIGHTING_NOTE}</small>
+    </div>
+    <div class="rec-health" id="rec-health" style="font-size:12px;opacity:.85;width:100%"></div>`;
+  host.appendChild(box);
+  const q = (id: string) => box.querySelector<HTMLElement>('#' + id)!;
+  const render = () => {
+    q('rec-toggle').textContent = rec.recording ? '■ Stop rec' : '● Record';
+    q('rec-toggle').classList.toggle('on', rec.recording);
+    q('rec-count').textContent = String(rec.count); q('rec-devs').textContent = String(rec.devices);
+    const sel = q('rec-label') as HTMLSelectElement; if (document.activeElement !== sel) sel.value = rec.label ?? '';
+    q('rec-health').textContent = rec.s.startedAt ? rec.healthLine() : '';
+  };
+  q('rec-toggle').onclick = () => {
+    if (rec.recording) { rec.stop(); render(); alert(`Recording stopped.\n${rec.healthLine()}`); } else { rec.start(backend()); render(); }
+  };
+  // Ground truth for field evaluation (scripts/field-eval.mjs). Can be set or changed during or after a session.
+  (q('rec-label') as HTMLSelectElement).onchange = e => { const v = (e.target as HTMLSelectElement).value; rec.setLabel(v ? v as FieldLabel : null); render(); };
+  q('rec-clear').onclick = () => { if (confirm('Clear recorded adverts?')) { rec.clear(); render(); } };
+  q('rec-export').onclick = () => {
+    exportSession(JSON.stringify(rec.exportObject(ver), null, 2)).catch(e => alert(`Could not share the session file: ${e?.message ?? e}`));
+  };
+  const mark = (kind: 'vehicle-arrived' | 'vehicle-left') => {
+    const saved = rec.markSighting(kind, loc?.());
+    const note = q('sight-note');
+    if (saved) note.textContent = `Saved ${kind === 'vehicle-arrived' ? 'vehicle arrived' : 'vehicle left'} at ${new Date(saved.t).toLocaleTimeString()}. ${SIGHTING_NOTE}`;
+  };
+  q('sight-arrived').onclick = () => mark('vehicle-arrived');
+  q('sight-left').onclick = () => mark('vehicle-left');
+  render(); setInterval(render, 1000);
+  return render;
+}
